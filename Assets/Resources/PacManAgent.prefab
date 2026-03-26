@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: -4687693382850069095}
   m_Layer: 7
   m_Name: PacManAgent
-  m_TagString: Red
+  m_TagString: Blue
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

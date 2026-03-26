@@ -352,7 +352,6 @@ namespace PacMan
             return new ProtoPacManObservation
             {
                 Position = Vector3FromUnity(observation.Position),
-                Velocity = Vector3FromUnity(observation.Velocity),
                 IsGhost = observation.IsGhost,
                 Visible = observation.Visible,
                 ReadingDispersion = observation.ReadingDispersion,
@@ -385,7 +384,6 @@ namespace PacMan
             return new PacManObservation
             {
                 Position = ToUnityVector3(protoObservation.Position),
-                Velocity = ToUnityVector3(protoObservation.Velocity),
                 IsGhost = protoObservation.IsGhost,
                 Visible = protoObservation.Visible,
                 ReadingDispersion = protoObservation.ReadingDispersion,

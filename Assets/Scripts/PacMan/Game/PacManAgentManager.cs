@@ -121,29 +121,28 @@ namespace PacMan.Local
                 .Select(pair =>
                 {
                     var agent = pair.agent;
+                    var velocity = agent.GetComponent<Rigidbody>().linearVelocity;
+
                     var pacManObservation = new PacManObservation
                     {
                         Visible = pair.visible,
                         IsGhost = isGhost,
                         HasFood = agent.foodCarried.Count > 0,
                         Position = agent.gameObject.transform.localPosition,
-                        Velocity = agent.GetComponent<Rigidbody>().linearVelocity,
                         ServerIndex = agent.serverIndex
                     };
                     if (!pair.visible)
                     {
-                        if (pacManObservation.Velocity.magnitude <= 0.71f)
+                        if (velocity.magnitude <= 0.71f)
                         {
                             pacManObservation.Position = Vector3.zero;
                         }
                         else
                         {
-                            var dispersion = _observationSpread * 0.5f + _observationSpread * 0.5f * (2.34f - pacManObservation.Velocity.magnitude) / 1.63f; //1.63f = 2.34f - 0.71f i.e minus minimum OBSERVABLE velocity
+                            var dispersion = _observationSpread * 0.5f + _observationSpread * 0.5f * (2.34f - velocity.magnitude) / 1.63f; //1.63f = 2.34f - 0.71f i.e minus minimum OBSERVABLE velocity
                             pacManObservation.ReadingDispersion = dispersion;
                             pacManObservation.Position += new Vector3(Random.value * dispersion - dispersion / 2, 0, Random.value * dispersion - dispersion / 2);
                         }
-
-                        pacManObservation.Velocity = Vector3.zero;
                     }
 
                     return pacManObservation;
@@ -260,15 +259,15 @@ namespace PacMan.Local
         public virtual void OnCollisionStay(Collision other)
         {
             var otherAgent = other.gameObject.GetComponent<PacManAgentManager>();
-            if (other.gameObject.name == "PacManAgent" && other.gameObject.tag != tag && !otherAgent.isScared && (!IsGhost() && otherAgent.IsGhost() ||
-                                                                                                                  IsGhost() && otherAgent.IsGhost() ||
-                                                                                                                  !IsGhost() && !otherAgent.IsGhost()))
+            if (otherAgent != null && other.gameObject.tag != tag && !otherAgent.isScared && (!IsGhost() && otherAgent.IsGhost() ||
+                                                                                              IsGhost() && otherAgent.IsGhost() ||
+                                                                                              !IsGhost() && !otherAgent.IsGhost()))
             {
                 PacManGameManager.DropFood(this, false);
                 transform.position = globalStartPosition;
             }
 
-            if (other.gameObject.name == "PacManAgent" && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
+            if (otherAgent != null && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
             {
                 transform.position = globalStartPosition;
             }

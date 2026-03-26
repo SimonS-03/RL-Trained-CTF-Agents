@@ -12609,7 +12609,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mapManager: {fileID: 4594948241594532799}
-  agentPrefab: {fileID: 3737944645222697628, guid: 78ad2897600adf64d849c987156d77ed,
+  redAgentPrefab: {fileID: 3737944645222697628, guid: 78ad2897600adf64d849c987156d77ed,
+    type: 3}
+  blueAgentPrefab: {fileID: 3737944645222697628, guid: 78ad2897600adf64d849c987156d77ed,
     type: 3}
   foodPrefab: {fileID: 1664925298644982172, guid: ccb1af850bf461a4299e072011c94a13,
     type: 3}
@@ -12668,7 +12670,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a23fd555dadb42368b6bc748e32e6a60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  filename: test
+  filename: test_load
 --- !u!1 &1593643977651339779
 GameObject:
   m_ObjectHideFlags: 0

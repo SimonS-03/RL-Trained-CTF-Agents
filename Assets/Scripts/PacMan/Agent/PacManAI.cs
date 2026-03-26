@@ -9,11 +9,11 @@ namespace PacMan.Agent
 {
     public class PacManAI : MonoBehaviour
     {
-        private PacManAgentManager _agent;
-        private ObstacleMap _obstacleMap;
-        private MapManager _mapManager;
+        protected PacManAgentManager _agent;
+        protected ObstacleMap _obstacleMap;
+        protected MapManager _mapManager;
 
-        public void Initialize(MapManager mapManager) // Ticked when all agents spawned by the network and seen properly by the client. Not the same as Start or Awake in this assignment.
+        public virtual void Initialize(MapManager mapManager) // Ticked when all agents spawned by the network and seen properly by the client. Not the same as Start or Awake in this assignment.
         {
             _agent = GetComponent<PacManAgentManager>();
             _mapManager = mapManager;
@@ -21,7 +21,7 @@ namespace PacMan.Agent
             // All of the calls below should also work in here. Report it as a bug if you find that some part of the observations is inaccessible during init.
         }
 
-        public PacManAction Tick() //The Tick from the network controller
+        public virtual PacManAction Tick() //The Tick from the network controller
         {
             _agent.GetTimeRemaining();
             _agent.GetScore();

@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
-using PacMan.Agent;
 using PacMan.Interface;
 using PacMan.Local;
 using UnityEngine;
 
 namespace PacMan.Game
 {
-    public class PacManWorker : MonoBehaviour, IPacManWorkerInterface
+    public class PacManWorker : MonoBehaviour
     {
         public GameObject CreateEdible(GameObject parent, GameObject prefab, Vector3 position)
         {

@@ -14,7 +14,7 @@ namespace PacMan.Network
 {
     public class CommunicatorHttpClient : IDisposable
     {
-        public static int channel = 50010;
+        public static int channel = 50000;
         public const string TeamNameHeaderName = "X-PacMan-Team-Name";
 
         private static readonly Lazy<CommunicatorHttpClient> _sLazy = new(() => new CommunicatorHttpClient());

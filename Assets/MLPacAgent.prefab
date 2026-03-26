@@ -17,6 +17,8 @@ GameObject:
   - component: {fileID: -6118214061011162182}
   - component: {fileID: -451854430369615389}
   - component: {fileID: 5653406579919043120}
+  - component: {fileID: 9108027161529886781}
+  - component: {fileID: 702771531215227480}
   m_Layer: 7
   m_Name: MLPacAgent
   m_TagString: Red
@@ -151,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 1
+    VectorObservationSize: 3
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
@@ -197,9 +199,69 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.DecisionRequester
-  DecisionPeriod: 10
-  DecisionStep: 0
-  TakeActionsBetweenDecisions: 0
+  DecisionPeriod: 5
+  DecisionStep: 1
+  TakeActionsBetweenDecisions: 1
+--- !u!114 &9108027161529886781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3737944645222697628}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a501962d056745d1a30e99146ee39fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.GridSensorComponent
+  m_SensorName: ObstacleSensor
+  m_CellScale: {x: 0.25, y: 0.01, z: 0.25}
+  m_GridSize: {x: 25, y: 1, z: 25}
+  m_RotateWithAgent: 0
+  m_AgentGameObject: {fileID: 3737944645222697628}
+  m_DetectableTags:
+  - Obstacle
+  m_ColliderMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  m_MaxColliderBufferSize: 500
+  m_InitialColliderBufferSize: 10
+  m_DebugColors:
+  - {r: 0, g: 0, b: 0, a: 0}
+  m_GizmoYOffset: 0
+  m_ShowGizmos: 1
+  m_CompressionType: 1
+  m_ObservationStacks: 1
+--- !u!114 &702771531215227480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3737944645222697628}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a501962d056745d1a30e99146ee39fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.GridSensorComponent
+  m_SensorName: FoodSensor
+  m_CellScale: {x: 0.8, y: 0.01, z: 0.8}
+  m_GridSize: {x: 8, y: 1, z: 8}
+  m_RotateWithAgent: 0
+  m_AgentGameObject: {fileID: 3737944645222697628}
+  m_DetectableTags:
+  - Food
+  m_ColliderMask:
+    serializedVersion: 2
+    m_Bits: 8
+  m_MaxColliderBufferSize: 500
+  m_InitialColliderBufferSize: 10
+  m_DebugColors:
+  - {r: 0, g: 0.041543446, b: 0.9245283, a: 0}
+  m_GizmoYOffset: 0
+  m_ShowGizmos: 1
+  m_CompressionType: 1
+  m_ObservationStacks: 1
 --- !u!1 &5824477697522828855
 GameObject:
   m_ObjectHideFlags: 0

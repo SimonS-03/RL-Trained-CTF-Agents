@@ -18,7 +18,8 @@ namespace PacMan.Game
         private const int ServerClientCount = TeamAssignmentUtil.ExpectedNetworkClientCount;
 
         public MapManager mapManager;
-        public GameObject agentPrefab;
+        public GameObject redAgentPrefab;
+        public GameObject blueAgentPrefab;
         public GameObject foodPrefab;
         public GameObject capsulePrefab;
 
@@ -42,7 +43,7 @@ namespace PacMan.Game
         public List<GameObject> capsules;
         public bool started;
 
-        private IPacManWorkerInterface _pacManWorker;
+        private PacManWorker _pacManWorker;
         public bool AutomaticRestart;
 
         public GameRecorder gameRecorder;
@@ -64,7 +65,7 @@ namespace PacMan.Game
         void Awake()
         {
             StartTime = Time.time;
-            _pacManWorker = GetComponent<IPacManWorkerInterface>();
+            _pacManWorker = GetComponent<PacManWorker>();
             _selector = FindFirstObjectByType<PacManManagerModeSelector>();
             ConfigureCommandLineRecording();
             ConfigurePhysicsSimulationMode();
@@ -128,6 +129,8 @@ namespace PacMan.Game
         protected void Initialize()
         {
             mapManager.Initialize();
+            EnsureCollectionsInitialized();
+            RegisterPreSpawnedLocalAgents();
             RestartGame();
 
             if (CurrentMode == ManagerMode.Server)
@@ -138,8 +141,11 @@ namespace PacMan.Game
 
         public void RestartGame()
         {
-            foodList.ForEach(food => _pacManWorker.RemoveObject(food));
-            capsules.ForEach(capsule => _pacManWorker.RemoveObject(capsule));
+            EnsureCollectionsInitialized();
+            foodList.Where(food => food != null).ToList().ForEach(food => _pacManWorker.RemoveObject(food));
+            capsules.Where(capsule => capsule != null).ToList().ForEach(capsule => _pacManWorker.RemoveObject(capsule));
+            foodList.Clear();
+            capsules.Clear();
             StartGame();
             SynchronizeAgentServerIndices();
             agents.ForEach(agent => agent.Initialize(this, ShouldDeferAgentAIInitialization));
@@ -149,6 +155,7 @@ namespace PacMan.Game
 
         public void StartGame()
         {
+            EnsureCollectionsInitialized();
             StartTime = Time.time;
             matchTime = 0f;
             _waitingForClientActions = false;
@@ -168,13 +175,227 @@ namespace PacMan.Game
             if (agents == null || agents.Count == 0)
             {
                 agents = new List<PacManAgentManager>();
-                AddTeam("Blue");
-                AddTeam("Red");
+                AddTeam("Blue", blueAgentPrefab);
+                AddTeam("Red", redAgentPrefab);
             }
 
             CreateEdibles();
             started = true;
             finished = false;
+        }
+
+        private void EnsureCollectionsInitialized()
+        {
+            agents ??= new List<PacManAgentManager>();
+            redAgents ??= new List<PacManAgentManager>();
+            blueAgents ??= new List<PacManAgentManager>();
+            foodList ??= new List<GameObject>();
+            capsules ??= new List<GameObject>();
+        }
+
+        private bool TryUseConfiguredTeamLists()
+        {
+            if (!HasConfiguredTeamList(blueAgents) || !HasConfiguredTeamList(redAgents))
+            {
+                return false;
+            }
+
+            blueAgents = blueAgents.Where(agent => agent != null).ToList();
+            redAgents = redAgents.Where(agent => agent != null).ToList();
+
+            foreach (var agent in blueAgents)
+            {
+                ApplySceneAgentIdentity(agent, "Blue");
+                agent.globalStartPosition = agent.transform.position;
+            }
+
+            foreach (var agent in redAgents)
+            {
+                ApplySceneAgentIdentity(agent, "Red");
+                agent.globalStartPosition = agent.transform.position;
+            }
+
+            agents = new List<PacManAgentManager>(blueAgents.Count + redAgents.Count);
+            agents.AddRange(blueAgents);
+            agents.AddRange(redAgents);
+            return true;
+        }
+
+        private static bool HasConfiguredTeamList(List<PacManAgentManager> teamAgents)
+        {
+            return teamAgents != null && teamAgents.Any(agent => agent != null);
+        }
+
+        private void RegisterPreSpawnedLocalAgents()
+        {
+            if (CurrentMode != ManagerMode.Local || _selector != null)
+            {
+                return;
+            }
+
+            if (TryUseConfiguredTeamLists())
+            {
+                return;
+            }
+
+            var sceneAgents = GetComponentsInChildren<PacManAgentManager>(true)
+                .Where(agent => agent != null)
+                .Distinct()
+                .ToList();
+
+            if (sceneAgents.Count == 0)
+            {
+                return;
+            }
+
+            var allStartPositions = mapManager?.startPositions ?? new List<Vector3>();
+            var agentsPerSide = allStartPositions.Count / 2;
+            var blueStartPositions = GetStartWorldPositions(0, agentsPerSide, allStartPositions);
+            var redStartPositions = GetStartWorldPositions(agentsPerSide, allStartPositions.Count - agentsPerSide, allStartPositions);
+
+            foreach (var agent in sceneAgents)
+            {
+                var teamTag = ResolveSceneAgentTeamTag(agent, blueStartPositions, redStartPositions);
+                ApplySceneAgentIdentity(agent, teamTag);
+                agent.globalStartPosition = agent.transform.position;
+            }
+
+            blueAgents = OrderSceneAgents(sceneAgents.Where(agent => agent.CompareTag("Blue")).ToList(), blueStartPositions);
+            redAgents = OrderSceneAgents(sceneAgents.Where(agent => agent.CompareTag("Red")).ToList(), redStartPositions);
+
+            agents = new List<PacManAgentManager>(blueAgents.Count + redAgents.Count);
+            agents.AddRange(blueAgents);
+            agents.AddRange(redAgents);
+        }
+
+        private List<Vector3> GetStartWorldPositions(int startIndex, int count, IReadOnlyList<Vector3> allStartPositions)
+        {
+            var worldPositions = new List<Vector3>();
+            if (allStartPositions == null || count <= 0)
+            {
+                return worldPositions;
+            }
+
+            var startsTransform = mapManager != null ? mapManager.transform.Find("Starts") : null;
+            var startsOrigin = startsTransform != null
+                ? startsTransform.position
+                : mapManager != null ? mapManager.transform.position : Vector3.zero;
+
+            for (var i = 0; i < count; i++)
+            {
+                var listIndex = startIndex + i;
+                if (listIndex < 0 || listIndex >= allStartPositions.Count)
+                {
+                    break;
+                }
+
+                worldPositions.Add(startsOrigin + allStartPositions[listIndex]);
+            }
+
+            return worldPositions;
+        }
+
+        private string ResolveSceneAgentTeamTag(PacManAgentManager agent, IReadOnlyList<Vector3> blueStartPositions, IReadOnlyList<Vector3> redStartPositions)
+        {
+            if (agent == null)
+            {
+                return string.Empty;
+            }
+
+            if (agent.CompareTag("Blue"))
+            {
+                return "Blue";
+            }
+
+            if (agent.CompareTag("Red"))
+            {
+                return "Red";
+            }
+
+            var agentPosition = agent.transform.position;
+            var closestBlueStartDistance = GetClosestStartDistanceSquared(agentPosition, blueStartPositions);
+            var closestRedStartDistance = GetClosestStartDistanceSquared(agentPosition, redStartPositions);
+            if (!float.IsPositiveInfinity(closestBlueStartDistance) || !float.IsPositiveInfinity(closestRedStartDistance))
+            {
+                return closestBlueStartDistance <= closestRedStartDistance ? "Blue" : "Red";
+            }
+
+            return agent.transform.localPosition.x <= 0f ? "Blue" : "Red";
+        }
+
+        private static float GetClosestStartDistanceSquared(Vector3 position, IReadOnlyList<Vector3> startPositions)
+        {
+            if (startPositions == null || startPositions.Count == 0)
+            {
+                return float.PositiveInfinity;
+            }
+
+            var closestDistance = float.PositiveInfinity;
+            foreach (var startPosition in startPositions)
+            {
+                var distance = (position - startPosition).sqrMagnitude;
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                }
+            }
+
+            return closestDistance;
+        }
+
+        private void ApplySceneAgentIdentity(PacManAgentManager agent, string teamTag)
+        {
+            if (agent == null || string.IsNullOrWhiteSpace(teamTag))
+            {
+                return;
+            }
+
+            agent.tag = teamTag;
+            var prefab = string.Equals(teamTag, "Blue", StringComparison.Ordinal) ? blueAgentPrefab : redAgentPrefab;
+            if (prefab != null)
+            {
+                agent.name = prefab.name;
+                return;
+            }
+
+            agent.name = "PacManAgent";
+        }
+
+        private static List<PacManAgentManager> OrderSceneAgents(List<PacManAgentManager> sceneAgents, IReadOnlyList<Vector3> orderedStartPositions)
+        {
+            if (sceneAgents == null || sceneAgents.Count == 0)
+            {
+                return new List<PacManAgentManager>();
+            }
+
+            var orderedAgents = new List<PacManAgentManager>(sceneAgents.Count);
+            var remainingAgents = sceneAgents
+                .Where(agent => agent != null)
+                .Distinct()
+                .ToList();
+
+            foreach (var startPosition in orderedStartPositions ?? Array.Empty<Vector3>())
+            {
+                if (remainingAgents.Count == 0)
+                {
+                    break;
+                }
+
+                var nextAgent = remainingAgents
+                    .OrderBy(agent => (agent.transform.position - startPosition).sqrMagnitude)
+                    .ThenBy(agent => agent.transform.position.z)
+                    .ThenBy(agent => agent.transform.position.x)
+                    .First();
+
+                orderedAgents.Add(nextAgent);
+                remainingAgents.Remove(nextAgent);
+            }
+
+            orderedAgents.AddRange(remainingAgents
+                .OrderBy(agent => agent.transform.position.z)
+                .ThenBy(agent => agent.transform.position.x));
+
+            return orderedAgents;
         }
 
         public void FixedUpdate()
@@ -344,7 +565,7 @@ namespace PacMan.Game
             redFood = foodList.FindAll(food => TeamAssignmentUtil.CheckTeam(food) == Team.Red && food.activeSelf).Count;
             blueScore = blueFood - redFood;
             redScore = redFood - blueFood;
-            finished = matchTime > matchLength;
+            finished = matchLength != 0 && matchTime > matchLength;
         }
 
         protected void AdvanceSimulationClock(float deltaTime)
@@ -449,13 +670,13 @@ namespace PacMan.Game
         }
 
 
-        public void AddTeam(string team_tag)
+        public void AddTeam(string team_tag, GameObject prefab)
         {
             int index = team_tag == "Blue" ? 1 : 2;
             for (int i = 0; i < agentsPerTeam; i++)
             {
                 var position = mapManager.startPositions[i + (index - 1) * agentsPerTeam];
-                var agent = _pacManWorker.CreateAgent(agentPrefab, gameObject, mapManager.transform.Find("Starts").transform.position + position, team_tag);
+                var agent = _pacManWorker.CreateAgent(prefab, gameObject, mapManager.transform.Find("Starts").transform.position + position, team_tag);
 
                 agents.Add(agent.GetComponent<PacManAgentManager>());
                 if (team_tag == "Blue")

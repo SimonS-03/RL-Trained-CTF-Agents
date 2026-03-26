@@ -45038,6 +45038,12 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 3737944645222697628, guid: b0df2e39365494e788fccefd4d9ec04b,
         type: 3}
+    - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
+        type: 3}
+      propertyPath: redAgentPrefab
+      value: 
+      objectReference: {fileID: 3737944645222697628, guid: b0df2e39365494e788fccefd4d9ec04b,
+        type: 3}
     - target: {fileID: 4594948241594532799, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: fileName
@@ -62562,7 +62568,7 @@ PrefabInstance:
     - target: {fileID: 1579076643992335290, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: m_Name
-      value: ReplayManager
+      value: PlaybackManager
       objectReference: {fileID: 0}
     - target: {fileID: 1579076643992335290, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -63984,7 +63990,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.Local.GameStatePlaybackManager
   mapManager: {fileID: 1238940898}
-  agentPrefab: {fileID: 3737944645222697628, guid: bee5b93dc0412234284720b2cac382a3,
+  redAgentPrefab: {fileID: 3737944645222697628, guid: bee5b93dc0412234284720b2cac382a3,
+    type: 3}
+  blueAgentPrefab: {fileID: 3737944645222697628, guid: bee5b93dc0412234284720b2cac382a3,
     type: 3}
   foodPrefab: {fileID: 1664925298644982172, guid: ccb1af850bf461a4299e072011c94a13,
     type: 3}

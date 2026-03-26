@@ -18,7 +18,7 @@ namespace PacMan.Network
 {
     public class CommunicatorHttpServer
     {
-        public static int channel = 50010;
+        public static int channel = 50000;
         private static readonly Lazy<CommunicatorHttpServer> _sLazy = new(() => new CommunicatorHttpServer());
 
         public static CommunicatorHttpServer Instance => _sLazy.Value;
