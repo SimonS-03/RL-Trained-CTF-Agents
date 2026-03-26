@@ -17,6 +17,7 @@ def main():
     env.reset()
     behaviour_name = list(env.behavior_specs.keys())[0] # Assuming we only have one "agent" type
     model = Network()
+    
     print("Press play!")
     try:
         pass

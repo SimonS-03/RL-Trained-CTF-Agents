@@ -45032,6 +45032,12 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: 2.09
       objectReference: {fileID: 0}
+    - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
+        type: 3}
+      propertyPath: agentPrefab
+      value: 
+      objectReference: {fileID: 3737944645222697628, guid: b0df2e39365494e788fccefd4d9ec04b,
+        type: 3}
     - target: {fileID: 4594948241594532799, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: fileName

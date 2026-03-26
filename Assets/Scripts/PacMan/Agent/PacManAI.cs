@@ -55,7 +55,7 @@ namespace PacMan.Agent
             // // replace the human input below with some AI stuff
             var x = 0;
             var z = 0;
-
+            /*
             if (TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue && Input.GetKey("w") || TeamAssignmentUtil.CheckTeam(gameObject) == Team.Red && Input.GetKey("up"))
             {
                 z = 1;
@@ -75,7 +75,7 @@ namespace PacMan.Agent
             {
                 x = 1;
             }
-
+            */
             var droneAction = new PacManAction
             {
                 Acceleration = new Vector2(x, z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
