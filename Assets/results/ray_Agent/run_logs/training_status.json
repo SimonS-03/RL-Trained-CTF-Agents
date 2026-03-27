@@ -1,0 +1,30 @@
+{
+    "PacAgent": {
+        "elo": 1193.8641681126999,
+        "checkpoints": [
+            {
+                "steps": 65072,
+                "file_path": "results/ray_Agent/PacAgent/PacAgent-65072.onnx",
+                "reward": 69.83187328628264,
+                "creation_time": 1774603854.4618602,
+                "auxillary_file_paths": [
+                    "results/ray_Agent/PacAgent/PacAgent-65072.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 65072,
+            "file_path": "results/ray_Agent/PacAgent.onnx",
+            "reward": 69.83187328628264,
+            "creation_time": 1774603854.4618602,
+            "auxillary_file_paths": [
+                "results/ray_Agent/PacAgent/PacAgent-65072.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.11.0"
+    }
+}

@@ -14,7 +14,7 @@ public class MLPacAgent: Agent
     private PacManAgentManager _agent;
     private int lastFoodCaried = 0;
     float distToBorder = 0f;
-    int team => gameObject.CompareTag("Blue")? 1 : -1;
+    private int team;
     public override void Initialize()
     {
         _agent = GetComponent<PacManAgentManager>();
@@ -27,10 +27,12 @@ public class MLPacAgent: Agent
         distToBorder /= 12.5f; // Width of the map
         distToBorder = Mathf.Clamp(distToBorder, -1f, 1f);
         int hunterInt = _agent.isGhost? 1 : -1;
+        team = gameObject.CompareTag("Blue")? 1 : -1;
         
-        // Our inputs are: team/side, distance to border (x = 0.3f), and whether or not we are hunted or hunter.
+        // Our inputs are: team/side, distance to border (x = 0.3f), and whether or not we are hunted or hunter. As well as direction we are looking.
         sensor.AddObservation(hunterInt);
         sensor.AddObservation(distToBorder);
+        sensor.AddObservation(team);
     }
 
     public void signalFoodDelivery(int nbr)
@@ -69,7 +71,9 @@ public class MLPacAgent: Agent
         }
 
         AddReward(_agent.GetScore()*.01f);
-        Debug.Log($"Reward sum: {GetCumulativeReward()}");
+        
+        //string teamString = gameObject.CompareTag("Blue") ? "Blue" : "Red"; 
+        //Debug.Log($"Reward sum for {teamString} pac: {GetCumulativeReward()}. Score for its team is currently {_agent.GetScore()}");
     }
 
     public override void OnEpisodeBegin()

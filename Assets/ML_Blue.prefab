@@ -1,5 +1,82 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2218117322403068119
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3322484645497484999}
+  - component: {fileID: 7600808215791463657}
+  - component: {fileID: 8427902462202749289}
+  m_Layer: 7
+  m_Name: RotLockRays
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3322484645497484999
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2218117322403068119}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 132902321428938902}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7600808215791463657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2218117322403068119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.RayPerceptionSensorComponent3D
+  m_SensorName: RayPerceptionSensor
+  m_DetectableTags:
+  - Blue
+  - Red
+  - Food
+  - Obstacle
+  m_RaysPerDirection: 14
+  m_MaxRayDegrees: 179
+  m_SphereCastRadius: 0.2
+  m_RayLength: 20
+  m_RayLayerMask:
+    serializedVersion: 2
+    m_Bits: 1160
+  m_ObservationStacks: 2
+  m_AlternatingRayOrder: 0
+  m_UseBatchedRaycasts: 0
+  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
+  rayMissColor: {r: 0, g: 0, b: 0, a: 1}
+  m_StartVerticalOffset: 0.2
+  m_EndVerticalOffset: 0.2
+--- !u!114 &8427902462202749289
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2218117322403068119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05de5f592196b414f875b506c9cb8c52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RotationLock
 --- !u!1 &3737944645222697628
 GameObject:
   m_ObjectHideFlags: 0
@@ -17,9 +94,6 @@ GameObject:
   - component: {fileID: -6118214061011162182}
   - component: {fileID: -451854430369615389}
   - component: {fileID: 5653406579919043120}
-  - component: {fileID: 9108027161529886781}
-  - component: {fileID: 702771531215227480}
-  - component: {fileID: -3450355138241210010}
   m_Layer: 7
   m_Name: ML_Blue
   m_TagString: Blue
@@ -41,6 +115,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7187873284888259483}
+  - {fileID: 3322484645497484999}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &8998246356077573631
@@ -154,7 +229,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 2
+    VectorObservationSize: 3
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
@@ -203,96 +278,6 @@ MonoBehaviour:
   DecisionPeriod: 7
   DecisionStep: 1
   TakeActionsBetweenDecisions: 1
---- !u!114 &9108027161529886781
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3737944645222697628}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2a501962d056745d1a30e99146ee39fe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.GridSensorComponent
-  m_SensorName: ObstacleSensor
-  m_CellScale: {x: 0.2, y: 0.01, z: 0.2}
-  m_GridSize: {x: 45, y: 1, z: 45}
-  m_RotateWithAgent: 0
-  m_AgentGameObject: {fileID: 3737944645222697628}
-  m_DetectableTags:
-  - Obstacle
-  m_ColliderMask:
-    serializedVersion: 2
-    m_Bits: 1024
-  m_MaxColliderBufferSize: 500
-  m_InitialColliderBufferSize: 10
-  m_DebugColors:
-  - {r: 0.9716981, g: 0.8186222, b: 0.22459061, a: 0}
-  m_GizmoYOffset: 0
-  m_ShowGizmos: 1
-  m_CompressionType: 1
-  m_ObservationStacks: 1
---- !u!114 &702771531215227480
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3737944645222697628}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2a501962d056745d1a30e99146ee39fe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.GridSensorComponent
-  m_SensorName: FoodSensor
-  m_CellScale: {x: 0.2, y: 0.01, z: 0.2}
-  m_GridSize: {x: 45, y: 1, z: 45}
-  m_RotateWithAgent: 0
-  m_AgentGameObject: {fileID: 3737944645222697628}
-  m_DetectableTags:
-  - Food
-  m_ColliderMask:
-    serializedVersion: 2
-    m_Bits: 8
-  m_MaxColliderBufferSize: 500
-  m_InitialColliderBufferSize: 10
-  m_DebugColors:
-  - {r: 0, g: 0.041543446, b: 0.9245283, a: 0}
-  m_GizmoYOffset: 0
-  m_ShowGizmos: 1
-  m_CompressionType: 1
-  m_ObservationStacks: 1
---- !u!114 &-3450355138241210010
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3737944645222697628}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2a501962d056745d1a30e99146ee39fe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.GridSensorComponent
-  m_SensorName: EnemySensor
-  m_CellScale: {x: 0.2, y: 0.01, z: 0.2}
-  m_GridSize: {x: 45, y: 1, z: 45}
-  m_RotateWithAgent: 0
-  m_AgentGameObject: {fileID: 3737944645222697628}
-  m_DetectableTags:
-  - Red
-  m_ColliderMask:
-    serializedVersion: 2
-    m_Bits: 128
-  m_MaxColliderBufferSize: 500
-  m_InitialColliderBufferSize: 10
-  m_DebugColors:
-  - {r: 1, g: 0, b: 0, a: 0}
-  m_GizmoYOffset: 0
-  m_ShowGizmos: 1
-  m_CompressionType: 1
-  m_ObservationStacks: 2
 --- !u!1 &5824477697522828855
 GameObject:
   m_ObjectHideFlags: 0
