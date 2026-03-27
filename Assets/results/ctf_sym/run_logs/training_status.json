@@ -1,0 +1,39 @@
+{
+    "PacAgent": {
+        "elo": 1094.918818651266,
+        "checkpoints": [
+            {
+                "steps": 499968,
+                "file_path": "results/ctf_sym/PacAgent/PacAgent-499968.onnx",
+                "reward": null,
+                "creation_time": 1774596126.172223,
+                "auxillary_file_paths": [
+                    "results/ctf_sym/PacAgent/PacAgent-499968.pt"
+                ]
+            },
+            {
+                "steps": 500968,
+                "file_path": "results/ctf_sym/PacAgent/PacAgent-500968.onnx",
+                "reward": 9.356875001918525,
+                "creation_time": 1774596160.1798432,
+                "auxillary_file_paths": [
+                    "results/ctf_sym/PacAgent/PacAgent-500968.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 500968,
+            "file_path": "results/ctf_sym/PacAgent.onnx",
+            "reward": 9.356875001918525,
+            "creation_time": 1774596160.1798432,
+            "auxillary_file_paths": [
+                "results/ctf_sym/PacAgent/PacAgent-500968.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.11.0"
+    }
+}

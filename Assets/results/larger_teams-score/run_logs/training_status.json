@@ -1,0 +1,30 @@
+{
+    "PacAgent": {
+        "elo": 1186.2119474326132,
+        "checkpoints": [
+            {
+                "steps": 26757,
+                "file_path": "results/larger_teams-score/PacAgent/PacAgent-26757.onnx",
+                "reward": -1.4756518521791566,
+                "creation_time": 1774598113.991474,
+                "auxillary_file_paths": [
+                    "results/larger_teams-score/PacAgent/PacAgent-26757.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 26757,
+            "file_path": "results/larger_teams-score/PacAgent.onnx",
+            "reward": -1.4756518521791566,
+            "creation_time": 1774598113.991474,
+            "auxillary_file_paths": [
+                "results/larger_teams-score/PacAgent/PacAgent-26757.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.11.0"
+    }
+}

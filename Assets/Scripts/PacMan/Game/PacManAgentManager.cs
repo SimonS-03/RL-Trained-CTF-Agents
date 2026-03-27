@@ -18,7 +18,7 @@ namespace PacMan.Local
 
         private PacManAI _pacManAI;
         private bool _aiInitialized;
-
+        private MLPacAgent _mlPacAgent;
         protected internal PacManMovementController Movement;
         protected internal PacManGameManager PacManGameManager;
         protected GameObject GhostObject;
@@ -41,6 +41,8 @@ namespace PacMan.Local
 
         public void Initialize(PacManGameManager pacManGameManager, bool deferAIInitialization = false)
         {
+            _mlPacAgent = GetComponent<MLPacAgent>();
+            _mlPacAgent.EndEpisode();
             PacManGameManager = pacManGameManager;
 
             Movement = GetComponent<PacManMovementController>();
@@ -186,6 +188,7 @@ namespace PacMan.Local
             {
                 if (foodCarried.Count > 0)
                 {
+                    _mlPacAgent.signalFoodDelivery(foodCarried.Count);
                     PacManGameManager.DropFood(this, true);
                 }
             }
@@ -263,13 +266,25 @@ namespace PacMan.Local
                                                                                               IsGhost() && otherAgent.IsGhost() ||
                                                                                               !IsGhost() && !otherAgent.IsGhost()))
             {
+                _mlPacAgent.signalDeath();
                 PacManGameManager.DropFood(this, false);
                 transform.position = globalStartPosition;
             }
 
             if (otherAgent != null && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
             {
+                _mlPacAgent.signalDeath();
                 transform.position = globalStartPosition;
+            }
+
+            if (other.gameObject.tag == "Obstacle")
+            {
+                _mlPacAgent.signalHitWall();
+            }
+
+            if (otherAgent != null && !other.gameObject.CompareTag(gameObject.tag) && !otherAgent.isGhost && isGhost)
+            {
+                _mlPacAgent.signalKill();
             }
         }
 
@@ -368,7 +383,10 @@ namespace PacMan.Local
 
         public float GetTimeRemaining()
         {
-            if (PacManGameManager.matchLength == 0) return 0;
+            if (PacManGameManager.matchLength == 0)
+            {
+                return 0;
+            }
             return PacManGameManager.matchLength - PacManGameManager.matchTime;
         }
 
