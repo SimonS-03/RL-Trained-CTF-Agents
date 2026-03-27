@@ -327,3 +327,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+
+# NN files
+*/results/
+
