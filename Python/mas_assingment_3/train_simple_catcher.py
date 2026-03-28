@@ -14,8 +14,8 @@ class Args(BaseArgs):
     env_id: str = "Catcher"
     total_timesteps: int = 10000000
     hidden_size: int = 64
-    num_envs: int = 200
-    unity_env_path: str = "C:/Users/Mart9/Workspace/MAS/MAS2025-Assignment-3/Build/PacManCTF.exe"
+    num_envs: int = 300
+    unity_env_path: str = "/home/ilian/multiagents/A3_Group8/builds/linux_build/linux_build.x86_64"
 
 
 make_env = make_unity_env_factory(

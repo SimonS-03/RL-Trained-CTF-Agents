@@ -3,6 +3,7 @@ import random
 import time
 from dataclasses import dataclass
 from typing import Any, Callable
+import os
 
 import gymnasium as gym
 import numpy as np
@@ -180,7 +181,13 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
+    STOP_FILE = "stop_training"
+
     for iteration in range(1, args.num_iterations + 1):
+        # Stop training early : touch stop_training
+        if os.path.exists(STOP_FILE):
+            print("Stop signal received")
+            break
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (iteration - 1.0) / args.num_iterations
