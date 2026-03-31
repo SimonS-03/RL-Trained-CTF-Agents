@@ -14,13 +14,13 @@ class Args(BaseArgs):
     env_id: str = "Catcher"
     total_timesteps: int = 10000000
     hidden_size: int = 64
-    num_envs: int = 300
-    unity_env_path: str = "/home/ilian/multiagents/A3_Group8/builds/linux_build/linux_build.x86_64"
+    num_envs: int = 1
+    unity_env_path: str = "/Users/ilian/dev/multiagent-1/A3_Group8/builds/macos_build.app/Contents/MacOS/PacManCTF"
 
 
 make_env = make_unity_env_factory(
-    base_port=50030,
-    scene_load="PacManRLTrainExample",
+    base_port=50010,
+    scene_load="Training_2",
     physics_steps_per_action=5,
     log_file_prefix="",  # Set to "" to disable logging files
 )

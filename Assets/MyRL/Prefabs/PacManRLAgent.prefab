@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 2054312325186796880}
   m_Layer: 7
   m_Name: PacManRLAgent
-  m_TagString: Blue
+  m_TagString: Red
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -139,7 +139,8 @@ MonoBehaviour:
   discreteObservations: 
   continuousActions: 2
   discreteActions: 
-  inferencePolicy: {fileID: 0}
+  inferencePolicy: {fileID: 5022602860645237092, guid: f5c3cc15fa5c34136b79e1af13f78597,
+    type: 3}
   gymSteps: 100
 --- !u!1 &5824477697522828855
 GameObject:

@@ -8,12 +8,15 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/PacManNormal.unity
     guid: f5cf569cf1597b145a7395e07b400383
-  - enabled: 1
+  - enabled: 0
     path: Assets/RLExample/Scenes/PacManRLTrainExample.unity
     guid: a44808d098852a6498e8e30cf3e82cef
   - enabled: 0
     path: Assets/RLExample/Scenes/PacManRLInferenceExample.unity
     guid: a798efb507dbf3e47aa8003a75e0edab
+  - enabled: 1
+    path: Assets/MyRL/Scenes/Training_2.unity
+    guid: a744c405145a440c6bbacaaf8fe07ca5
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f,
       type: 2}

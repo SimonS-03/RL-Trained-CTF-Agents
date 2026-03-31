@@ -36,6 +36,7 @@ public class FlowField
     {
         this.obstacleMap = obstacleMap;
         this.goalCells = goalCells;
+        Debug.Log("goalCells: " + goalCells.Count);
     }
 
     /// <summary>
@@ -44,10 +45,11 @@ public class FlowField
     /// </summary>
     public static FlowField Build(ObstacleMap obstacleMap, List<Vector3> goalsWorldPos)
     {
+        Debug.Log(goalsWorldPos.Count);
         var cells = new List<Vector2Int>();
-        foreach(var cell in goalsWorldPos)
+        foreach(var pos in goalsWorldPos)
         {
-            var cell3 = obstacleMap.WorldToCell(cell);
+            var cell3 = obstacleMap.WorldToCell(pos);
             cells.Add(new Vector2Int(cell3.x, cell3.z));
         }
         var ff = new FlowField(obstacleMap, cells);
@@ -92,7 +94,7 @@ public class FlowField
         foreach(var cell in goalCells)
         {
             CostField[cell] = 0f;
-            CostField[cell] += wallPotential(cell); // Add potential based on proximity to walls (optional)
+            // CostField[cell] += wallPotential(cell); // Add potential based on proximity to walls (optional)
             // wallPotentialField[cell] = wallPotential(cell);
 
             openSet.Add((0f, cell));
@@ -218,50 +220,6 @@ public class FlowField
     {
         return obstacleMap.traversabilityPerCell.TryGetValue(cell, out var t)
                && t == ObstacleMap.Traversability.Free;
-    }
-
-    private Vector2Int FindNearestFreeCell(Vector2Int from)
-    {
-        // BFS outward to find the closest free cell
-        var visited = new HashSet<Vector2Int> { from };
-        var queue = new Queue<Vector2Int>();
-        queue.Enqueue(from);
-
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            if (IsTraversable(current))
-                return current;
-
-            foreach (var (dx, dz, _) in Neighbors)
-            {
-                var n = new Vector2Int(current.x + dx, current.y + dz);
-                if (visited.Add(n) && obstacleMap.traversabilityPerCell.ContainsKey(n))
-                    queue.Enqueue(n);
-            }
-        }
-
-        return new Vector2Int(int.MinValue, int.MinValue); // nothing found
-    }
-
-    private float wallPotential(Vector2Int cell)
-    {   
-        foreach (var (dx, dz, _) in Neighbors)
-        {
-            var n = new Vector2Int(cell.x + dx, cell.y + dz);
-            if (!IsTraversable(n))
-                return 2f; // Fixed penalty for being adjacent to a wall
-            foreach (var (ddx, ddz, _) in Neighbors)
-            {
-                var nn = new Vector2Int(n.x + ddx, n.y + ddz);
-                if (!IsTraversable(nn))
-                    return 4f; // Higher penalty for being adjacent to a cell that is adjacent to a wall
-            }
-        }
-
-        // smoothAverage(3);
-        
-        return 0f; // nothing found
     }
 
     private void smoothAverage(int iterations)

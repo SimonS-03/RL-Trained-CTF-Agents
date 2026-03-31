@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using PacMan.Game;
 using PacMan.Interface.PacMan;
 using PacMan.Local;
@@ -16,8 +17,8 @@ namespace PacMan.RLAgent
         private PacManMovementController _controller;
         private bool _caughtTarget;
         private Vector2 _currentAction = Vector2.zero;
-        private PacManAgentManager _target;
-        private float _distancePrevious;
+        private AgentCoordinator _coordinator;
+        private float _currentFoodCount;
 
         private void Awake()
         {
@@ -27,6 +28,19 @@ namespace PacMan.RLAgent
 
         protected override void Initialize()
         {
+            // Initialize coordinator as the gameObject under same parent that has the flag of my team
+            _coordinator = transform.parent.GetComponentsInChildren<AgentCoordinator>().ToList().Find(coordinator => coordinator.isBlueTeam == (TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue));
+            _agent = GetComponent<PacManAgentManager>();
+            //_coordinator = GetComponentsInParent<AgentCoordinator>().ToList().Find(coordinator => coordinator.isBlueTeam == (TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue));
+            // _coordinator.RegisterAgent(this);
+
+            ResetState();
+        }
+
+        protected void ResetState()
+        {
+            _currentAction = Vector2.zero;
+            _currentFoodCount = 0;
         }
 
         protected override void CollectInfo(Dictionary<string, float> metadata)
@@ -37,15 +51,8 @@ namespace PacMan.RLAgent
 
         protected override void GymReset()
         {
-            var localRandomPosition = new Vector3(Random.Range(-13f, -2.5f), 0.4f, Random.Range(-5f, 5f));
-            _agent.transform.position = _agent.PacManGameManager.transform.TransformPoint(localRandomPosition);
-            _caughtTarget = false;
-
-            _target = _agent.PacManGameManager.agents.Find(agent => agent.gameObject != gameObject);
-
-            localRandomPosition = new Vector3(Random.Range(-13f, -2.5f), 0.4f, Random.Range(-5f, 5f));
-            _target.transform.position = _agent.PacManGameManager.transform.TransformPoint(localRandomPosition);
-            _distancePrevious = DistanceToTarget(_target, _agent).magnitude;
+            _coordinator.ResetEpisode();
+            ResetState();
         }
 
         public void FixedUpdate()
@@ -60,10 +67,10 @@ namespace PacMan.RLAgent
 
         protected override void CollectObservation(ref AgentObservation observation)
         {
-            CollectObservation(observation, _target, _agent);
+            CollectObservation(observation, _agent, _coordinator);
         }
 
-        public static AgentObservation CollectObservation(AgentObservation observation, PacManAgentManager targetAgent, PacManAgentManager thisAgent)
+        public static AgentObservation CollectObservation(AgentObservation observation, PacManAgentManager thisAgent, AgentCoordinator coordinator)
         {
             // Observation ideas
             // - Flow field direction and score
@@ -75,13 +82,19 @@ namespace PacMan.RLAgent
             // - 
 
 
-            var enemyRelative = DistanceToTarget(targetAgent, thisAgent); //Normalized target vector. Not in agent space, because actions are not in agent space :)
-            observation.AppendContinuous(Mathf.Clamp(enemyRelative.x, -1f, 1f));
-            observation.AppendContinuous(Mathf.Clamp(enemyRelative.z, -1f, 1f));
+            // var enemyRelative = DistanceToTarget(targetAgent, thisAgent); //Normalized target vector. Not in agent space, because actions are not in agent space :)
+            // observation.AppendContinuous(Mathf.Clamp(enemyRelative.x, -1f, 1f));
+            // observation.AppendContinuous(Mathf.Clamp(enemyRelative.z, -1f, 1f));
 
-            var enemyVelocity = targetAgent.GetComponent<Rigidbody>().linearVelocity / 2.1f;
-            observation.AppendContinuous(Mathf.Clamp(enemyVelocity.x, -1, 1));
-            observation.AppendContinuous(Mathf.Clamp(enemyVelocity.z, -1, 1));
+            // var enemyVelocity = targetAgent.GetComponent<Rigidbody>().linearVelocity / 2.1f;
+            // observation.AppendContinuous(Mathf.Clamp(enemyVelocity.x, -1, 1));
+            // observation.AppendContinuous(Mathf.Clamp(enemyVelocity.z, -1, 1));
+
+            observation.AppendContinuous(Mathf.Clamp(coordinator.GetFlowCost(thisAgent.transform.position)/30f, 0f, 1f));
+            var flowDirection = coordinator.GetFlowDirection(thisAgent.transform.position);
+            observation.AppendContinuous(Mathf.Clamp(flowDirection.x, -1f, 1f));
+            observation.AppendContinuous(Mathf.Clamp(flowDirection.z, -1f, 1f));
+
             return observation;
 
             // Available :
@@ -123,24 +136,31 @@ namespace PacMan.RLAgent
 
         protected override float CollectReward()
         {
-            if (_caughtTarget) return 0.75f;
-            var distanceCurrent = DistanceToTarget(_target, _agent).magnitude;
-            var potentialReward = _distancePrevious - distanceCurrent;
-            return potentialReward / gymSteps * 0.25f;
+            float reward = 0f;
+
+            var newFood = _agent.GetCarriedFoodCount() - _currentFoodCount;
+            if (newFood > 0)
+                reward += newFood; // Reward for picking up food
+            // else reward if dropped in teritory or penalize if dead
+            _currentFoodCount = _agent.GetCarriedFoodCount();
+
+            reward -= 0.01f;
+
+            return reward;
         }
 
         protected override EnvironmentState GymStep()
         {
-            if (_caughtTarget) return EnvironmentState.Done;
+            if(_coordinator.timedOut)
+                return EnvironmentState.Truncated;
+            if(_coordinator.done)
+                return EnvironmentState.Done;
             return EnvironmentState.Running;
         }
 
         public virtual void OnCollisionStay(Collision other)
         {
-            if (other.gameObject.name == "PacManBrownian" && other.gameObject.tag != tag)
-            {
-                _caughtTarget = true;
-            }
+            // Nothing for now ?
         }
 
         protected override AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
