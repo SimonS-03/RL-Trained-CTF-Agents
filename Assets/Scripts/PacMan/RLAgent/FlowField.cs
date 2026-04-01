@@ -45,7 +45,7 @@ public class FlowField
     /// </summary>
     public static FlowField Build(ObstacleMap obstacleMap, List<Vector3> goalsWorldPos)
     {
-        Debug.Log(goalsWorldPos.Count);
+        // Debug.Log(goalsWorldPos.Count);
         var cells = new List<Vector2Int>();
         foreach(var pos in goalsWorldPos)
         {
@@ -126,12 +126,9 @@ public class FlowField
                 }
 
                 float newCost = currentCost + moveCost;
-                // float wp = wallPotential(neighbor);
-                // newCost += wp - wallPotentialField[current]; // Add potential based on proximity to walls (optional)
                 if (newCost < CostField.GetValueOrDefault(neighbor, float.MaxValue))
                 {
                     CostField[neighbor] = newCost;
-                    // wallPotentialField[neighbor] = wp;
                     openSet.Add((newCost, neighbor));
                 }
             }

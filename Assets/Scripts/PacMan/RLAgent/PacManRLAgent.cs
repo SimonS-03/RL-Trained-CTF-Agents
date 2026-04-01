@@ -19,6 +19,18 @@ namespace PacMan.RLAgent
         private Vector2 _currentAction = Vector2.zero;
         private AgentCoordinator _coordinator;
         private float _currentFoodCount;
+        private float _reward;
+        private static readonly (int dx, int dz)[] rayDirections =
+        {
+            (-1, -1),
+            (-1, 0),
+            (-1, 1),
+            (0, -1),
+            (0, 1),
+            (1, -1),
+            (1, 0),
+            (1, 1)
+        };
 
         private void Awake()
         {
@@ -41,6 +53,7 @@ namespace PacMan.RLAgent
         {
             _currentAction = Vector2.zero;
             _currentFoodCount = 0;
+            _reward = 0f;
         }
 
         protected override void CollectInfo(Dictionary<string, float> metadata)
@@ -73,27 +86,34 @@ namespace PacMan.RLAgent
         public static AgentObservation CollectObservation(AgentObservation observation, PacManAgentManager thisAgent, AgentCoordinator coordinator)
         {
             // Observation ideas
-            // - Flow field direction and score
-            // - On ennemy terrain
-            // - NearbyAssets/Scripts/PacMan/RLExample/PacManAIRL.cs agents position
-            // - raycasts x8
-            // - Ghost or not ?
+            // - OK Flow field direction and score
+            // - Nearby agents position
+            // - OK raycasts x8
+            // - OK Ghost or not
             // - Score and food count
-            // - 
+            // - Whether another agent is closer to closest food
 
-
-            // var enemyRelative = DistanceToTarget(targetAgent, thisAgent); //Normalized target vector. Not in agent space, because actions are not in agent space :)
-            // observation.AppendContinuous(Mathf.Clamp(enemyRelative.x, -1f, 1f));
-            // observation.AppendContinuous(Mathf.Clamp(enemyRelative.z, -1f, 1f));
-
-            // var enemyVelocity = targetAgent.GetComponent<Rigidbody>().linearVelocity / 2.1f;
-            // observation.AppendContinuous(Mathf.Clamp(enemyVelocity.x, -1, 1));
-            // observation.AppendContinuous(Mathf.Clamp(enemyVelocity.z, -1, 1));
+            observation.AppendContinuous(thisAgent.IsGhost() ? 1f : -1f);
+            // observation.AppendContinuous(Mathf.Clamp01(thisAgent.GetScore())) // Score difference ??
+            // observation.AppendContinuous(thisAgent.GetTimeRemaining() / 300); // Normalization ?
 
             observation.AppendContinuous(Mathf.Clamp(coordinator.GetFlowCost(thisAgent.transform.position)/30f, 0f, 1f));
             var flowDirection = coordinator.GetFlowDirection(thisAgent.transform.position);
             observation.AppendContinuous(Mathf.Clamp(flowDirection.x, -1f, 1f));
             observation.AppendContinuous(Mathf.Clamp(flowDirection.z, -1f, 1f));
+
+            foreach(var (dx, dz) in rayDirections)
+            {
+                var direction = dx *  Vector3.right + dz * Vector3.forward;
+                Physics.Raycast(thisAgent.transform.position, direction, out RaycastHit hitInfo, 10f);
+                observation.AppendContinuous(Mathf.Clamp01(hitInfo.distance / 10f));
+            }
+
+            // Using deepsets : foodObjects = _agent.GetFoodObjects()
+
+            // deepsets for each enemy: position, food, scared state (and until when), ghost state, powered up ? (not necessary if we know if we are scared ?)
+
+            
 
             return observation;
 
@@ -101,8 +121,8 @@ namespace PacMan.RLAgent
 
             thisAgent.GetTimeRemaining();
             thisAgent.GetScore();
-            bool isGhost = thisAgent.IsGhost();
-            bool isScared = thisAgent.IsScared();
+            bool isGhost = thisAgent.IsGhost(); // Can eat pacman
+            bool isScared = thisAgent.IsScared(); // Can be eaten anywhere
             float scaredDuration = thisAgent.GetScaredRemainingDuration();
 
             float carriedFoodCount = thisAgent.GetCarriedFoodCount();
@@ -129,24 +149,21 @@ namespace PacMan.RLAgent
             // friendlyAgentManager.GetVelocity(); // Given the damping, max velocity magnitude is around 2.34
         }
 
-        public static Vector3 DistanceToTarget(PacManAgentManager targetAgent, PacManAgentManager agent)
-        {
-            return (targetAgent.transform.position - agent.transform.position) / 15f;
-        }
-
         protected override float CollectReward()
         {
-            float reward = 0f;
-
+            // Food pickup
             var newFood = _agent.GetCarriedFoodCount() - _currentFoodCount;
             if (newFood > 0)
-                reward += newFood; // Reward for picking up food
+                _reward += newFood;
             // else reward if dropped in teritory or penalize if dead
             _currentFoodCount = _agent.GetCarriedFoodCount();
+            
+            //Living reward
+            _reward -= 0.01f;
 
-            reward -= 0.01f;
-
-            return reward;
+            float returnReward = _reward;
+            _reward = 0f;
+            return returnReward; // So that we can add rewards during the whole episode
         }
 
         protected override EnvironmentState GymStep()
@@ -160,7 +177,37 @@ namespace PacMan.RLAgent
 
         public virtual void OnCollisionStay(Collision other)
         {
-            // Nothing for now ?
+            // var otherAgent = other.gameObject.GetComponent<PacManAgentManager>();
+            // bool isEnemyAgent = otherAgent != null && other.gameObject.tag != tag;
+            // if (isEnemyAgent && !otherAgent.isScared && (!_agent.IsGhost() && otherAgent.IsGhost() ||
+            //                                             _agent.IsGhost() && otherAgent.IsGhost() ||
+            //                                             !_agent.IsGhost() && !otherAgent.IsGhost()))
+            // {
+            //     // Eaten by other agent:
+            //     // - In their territory
+            //     // - Ghost collision at border
+            //     // - Non-ghost collision at border
+            //     // drops food, killed, back to start
+            //     _reward += -3f;
+            // }
+
+            // if (isEnemyAgent && _agent.IsGhost() && _agent.isScared && !otherAgent.IsGhost())
+            // {
+            //     // Eaten by powered up enemy in my territory
+            //     _reward += -3f;
+            // }
+
+            // if (isEnemyAgent && !_agent.isScared && _agent.IsGhost() && !otherAgent.IsGhost())
+            // {
+            //     // I eat an agent in my territory
+            //     _reward += 3f;
+            // }
+
+            // if(isEnemyAgent && otherAgent.IsGhost() && otherAgent.isScared && !_agent.IsGhost())
+            // {
+            //     // I eat an agent in their territory
+            //     _reward += 3f;
+            // }
         }
 
         protected override AgentAction ProduceDummyAction(AgentAction dummyAgentAction)

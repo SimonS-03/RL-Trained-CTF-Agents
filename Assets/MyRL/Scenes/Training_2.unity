@@ -40645,8 +40645,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLAgent.AgentCoordinator
   cellScale: {x: 1, y: 1, z: 1}
   margin: {x: 0.95, y: 1, z: 0.95}
-  episodeLength: 1000
   isBlueTeam: 1
+  episodeLength: 500
   timedOut: 0
   done: 0
   drawFlowField: 0
@@ -88744,8 +88744,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLAgent.AgentCoordinator
   cellScale: {x: 1, y: 1, z: 1}
   margin: {x: 0.95, y: 1, z: 0.95}
-  episodeLength: 1000
   isBlueTeam: 0
+  episodeLength: 500
   timedOut: 0
   done: 0
   drawFlowField: 0

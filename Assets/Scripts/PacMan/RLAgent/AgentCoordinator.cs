@@ -18,14 +18,18 @@ namespace PacMan.RLAgent
         private Vector3 cellScale = Vector3.one;
         [SerializeField]
         private Vector3 margin = Vector3.one;
-        [SerializeField]
-        private int episodeLength = 5 * 100;
+        
+
         public ObstacleMap ObstacleMap { get; private set; }
         private FlowField ff;
         private List<PacManRLAgent> agents;
+        private List<Vector3> targetFood;
 
         public bool isBlueTeam = true;
+        [SerializeField]
+        private int episodeLength; // in game steps, so more than Gym steps !!
         private int step;
+        private int flowMapRebuildFreq = 10;
         private bool needsReset;
         public bool timedOut;
         public bool done;
@@ -54,7 +58,6 @@ namespace PacMan.RLAgent
                 cellScale,
                 margin: margin
             );
-            Debug.Log("Time to build flow fields...");
             float t = Time.realtimeSinceStartup;
             BuildFlowFields();
             Debug.Log("Flow fields built in " + (Time.realtimeSinceStartup - t) + " seconds");
@@ -72,6 +75,9 @@ namespace PacMan.RLAgent
             {
                 needsReset = true;
             }
+
+            if(step % flowMapRebuildFreq == 0)
+                rebuildFlowMapIfNeeded();
         }
 
         public void ResetEpisode()
@@ -89,8 +95,24 @@ namespace PacMan.RLAgent
             Debug.Log("BuildFlowFields");
             List<GameObject> activeGoals = PacManGameManager.foodList.Select(obj => obj.gameObject).ToList().FindAll(food => food.activeSelf); // Food that is currently on the ground
             // Target food (other's food)
-            List<Vector3> targetFood = activeGoals.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == (isBlueTeam ? Team.Red : Team.Blue)).Select(obj => obj.transform.position).ToList();
+            targetFood = activeGoals.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == (isBlueTeam ? Team.Red : Team.Blue)).Select(obj => obj.transform.position).ToList();
             ff = FlowField.Build(ObstacleMap, targetFood);
+        }
+
+        private void rebuildFlowMapIfNeeded()
+        {
+            // TODO use coroutine or multithreading
+            List<GameObject> currentActiveGoals = PacManGameManager.foodList.Select(obj => obj.gameObject).ToList().FindAll(food => food.activeSelf);
+            List<Vector3> currentTargetFood = currentActiveGoals.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == (isBlueTeam ? Team.Red : Team.Blue)).Select(obj => obj.transform.position).ToList();
+            if(currentTargetFood.Count != targetFood.Count)
+            {
+                BuildFlowFields();
+            }
+            else if(!new HashSet<Vector3>(currentTargetFood).SetEquals(new HashSet<Vector3>(targetFood)))
+            {
+                BuildFlowFields();
+            }
+            targetFood = currentTargetFood;
         }
 
         public Vector3 GetFlowDirection(Vector3 worldPos)
