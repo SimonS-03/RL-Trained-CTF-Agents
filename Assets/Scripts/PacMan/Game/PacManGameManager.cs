@@ -418,6 +418,14 @@ namespace PacMan.Game
 
             if (finished && AutomaticRestart)
             {
+                foreach (var agent in agents)
+                {
+                    var ml_agent = agent.GetComponent<MLPacAgent>();
+                    if (ml_agent != null)
+                    {
+                        ml_agent.OnGameEnd();
+                    }
+                }
                 RestartGame();
             }
         }

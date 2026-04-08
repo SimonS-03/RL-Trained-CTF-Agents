@@ -284,7 +284,7 @@ namespace PacMan.Local
 
             if (otherAgent != null && !other.gameObject.CompareTag(gameObject.tag) && !otherAgent.isGhost && isGhost)
             {
-                _mlPacAgent.signalKill();
+                _mlPacAgent.signalKill(otherAgent.foodCarried.Count);
             }
         }
 

@@ -161,7 +161,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: de2dbf41bfd72b742b58e625a4b54460, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: 95351c6fe162b7b4bbad85814ee79eef, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: PacAgent
@@ -198,7 +198,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.DecisionRequester
-  DecisionPeriod: 6
+  DecisionPeriod: 7
   DecisionStep: 1
   TakeActionsBetweenDecisions: 1
 --- !u!1 &5824477697522828855
