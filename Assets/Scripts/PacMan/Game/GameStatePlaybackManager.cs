@@ -239,13 +239,13 @@ namespace PacMan.Local
         {
             ConfigureRecordedFixedTimeStep(readState);
             UpdateControlledOwnership(readState);
-            if (_clientReference != null && readState != null && readState.Time < matchTime)
+            if (_clientReference != null && readState != null && readState.MatchTime < matchTime)
             {
                 _clientReference.ResetStepRequestTiming();
             }
 
             GameStateParser.ApplyState(this, readState);
-            matchTime = readState.Time;
+            matchTime = readState.MatchTime;
 
             Physics.SyncTransforms();
             if (simulatePhysics)

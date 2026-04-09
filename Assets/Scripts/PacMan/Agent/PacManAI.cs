@@ -24,7 +24,10 @@ namespace PacMan.Agent
         public virtual PacManAction Tick() //The Tick from the network controller
         {
             _agent.GetTimeRemaining();
-            _agent.GetScore();
+            var stepsSinceMatchStart = _agent.GetStepsSinceMatchStart();
+            var stepsRemaining = _agent.GetStepsRemaining();
+            var score = _agent.GetScore();
+            var lastRespawnStep = _agent.GetLastRespawnStep();
             bool isGhost = _agent.IsGhost();
             bool isScared = _agent.IsScared();
             float scaredDuration = _agent.GetScaredRemainingDuration();
@@ -51,7 +54,10 @@ namespace PacMan.Agent
             // Since the RigidBody is updated server side and the client only syncs position, rigidbody.Velocity does not report a velocity
             var velocity = _agent.GetVelocity(); // Use the manager method to get the true velocity from the server
             // friendlyAgentManager.GetVelocity(); // Given the damping, max velocity magnitude is around 2.34
-
+            if (lastRespawnStep != 0 && lastRespawnStep == stepsSinceMatchStart)
+            {
+                print("Detected respawn step");
+            }
             // // replace the human input below with some AI stuff
             var x = 0;
             var z = 0;

@@ -15,6 +15,7 @@ namespace PacMan.Local
         public List<GameObject> foodCarried;
         public bool isGhost;
         public int serverIndex = -1;
+        private int _lastRespawnStep;
 
         private PacManAI _pacManAI;
         private bool _aiInitialized;
@@ -51,7 +52,8 @@ namespace PacMan.Local
             PacManObject = transform.Find("visuals/pacman").gameObject;
             foodCarried = new List<GameObject>();
             _aiInitialized = false;
-            _latestKnownObservation.AgentServerIndex = serverIndex;
+            _lastRespawnStep = PacManGameManager != null ? PacManGameManager.CurrentSimulationStep : 0;
+            ResetMatchScopedState();
 
             ConfigureForCurrentMode();
 
@@ -61,6 +63,18 @@ namespace PacMan.Local
             }
 
             _ready = true;
+        }
+
+        private void ResetMatchScopedState()
+        {
+            _nextObservationTime = 0f;
+            _latestKnownObservation = new PacManObservations
+            {
+                Index = 0,
+                ObservationFixedTime = 0f,
+                AgentServerIndex = serverIndex,
+                Observations = System.Array.Empty<PacManObservation>()
+            };
         }
 
         protected virtual void ConfigureForCurrentMode()
@@ -128,10 +142,11 @@ namespace PacMan.Local
                     var pacManObservation = new PacManObservation
                     {
                         Visible = pair.visible,
-                        IsGhost = isGhost,
+                        IsGhost = agent.isGhost,
                         HasFood = agent.foodCarried.Count > 0,
                         Position = agent.gameObject.transform.localPosition,
-                        ServerIndex = agent.serverIndex
+                        ServerIndex = agent.serverIndex,
+                        LastRespawnStep = agent.GetLastRespawnStep()
                     };
                     if (!pair.visible)
                     {
@@ -255,7 +270,7 @@ namespace PacMan.Local
 
             if (IsGhost() && other.gameObject.name == "Capsule")
             {
-                transform.position = globalStartPosition;
+                PacManGameManager.RespawnAgentAtStart(this);
             }
         }
 
@@ -268,13 +283,14 @@ namespace PacMan.Local
             {
                 _mlPacAgent.signalDeath();
                 PacManGameManager.DropFood(this, false);
-                transform.position = globalStartPosition;
+                PacManGameManager.RespawnAgentAtStart(this);
             }
 
             if (otherAgent != null && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
             {
                 _mlPacAgent.signalDeath();
                 transform.position = globalStartPosition;
+                PacManGameManager.RespawnAgentAtStart(this);
             }
 
             if (other.gameObject.tag == "Obstacle")
@@ -339,6 +355,16 @@ namespace PacMan.Local
             return PacManGameManager != null ? PacManGameManager.CurrentSimulationTime : Time.fixedTime;
         }
 
+        public int GetStepsSinceMatchStart()
+        {
+            return PacManGameManager != null ? PacManGameManager.CurrentSimulationStep : 0;
+        }
+
+        public int GetStepsRemaining()
+        {
+            return PacManGameManager != null ? PacManGameManager.RemainingSimulationSteps : 0;
+        }
+
         public PacManObservations GetEnemyObservations()
         {
             return _latestKnownObservation;
@@ -364,6 +390,11 @@ namespace PacMan.Local
         public int GetCarriedFoodCount()
         {
             return foodCarried.Count;
+        }
+
+        public int GetLastRespawnStep()
+        {
+            return _lastRespawnStep;
         }
 
         public List<GameObject> GetCapsuleObjects()
@@ -393,6 +424,11 @@ namespace PacMan.Local
         public int GetScore()
         {
             return TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue ? PacManGameManager.blueScore : PacManGameManager.redScore;
+        }
+
+        public void SetLastRespawnStep(int step)
+        {
+            _lastRespawnStep = Mathf.Max(0, step);
         }
 
         public void SetScared(bool b, double serverTimeFixedTime)

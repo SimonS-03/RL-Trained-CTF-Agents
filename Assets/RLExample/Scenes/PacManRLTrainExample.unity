@@ -550,6 +550,12 @@ Transform:
   - {fileID: 1706174040}
   m_Father: {fileID: 2127494121}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &306861637 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3737944645222697628, guid: 372d9ca2ccbc9bf47845d3b0d110fee6,
+    type: 3}
+  m_PrefabInstance: {fileID: 2112326656}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &314142650
 GameObject:
   m_ObjectHideFlags: 0
@@ -1241,6 +1247,12 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2127494121}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &532382130 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3737944645222697628, guid: 40e1c8ede7388104f82d510c0f9e282b,
+    type: 3}
+  m_PrefabInstance: {fileID: 939897209}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &534275902
 GameObject:
   m_ObjectHideFlags: 0
@@ -3129,7 +3141,7 @@ MonoBehaviour:
     type: 3}
   m_PrefabInstance: {fileID: 939897209}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 532382130}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d3d5afa9208b4808835b28b9746378ac, type: 3}
@@ -8101,6 +8113,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8355453057230353753, guid: 372d9ca2ccbc9bf47845d3b0d110fee6,
         type: 3}
+      propertyPath: gymSteps
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 8355453057230353753, guid: 372d9ca2ccbc9bf47845d3b0d110fee6,
+        type: 3}
       propertyPath: inferencePolicy
       value: 
       objectReference: {fileID: 5022602860645237092, guid: 3b37354fb2055e64a9f164b8619dba25,
@@ -8122,7 +8139,7 @@ MonoBehaviour:
     type: 3}
   m_PrefabInstance: {fileID: 2112326656}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 306861637}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d3d5afa9208b4808835b28b9746378ac, type: 3}
@@ -8174,7 +8191,7 @@ PrefabInstance:
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: matchLength
-      value: 0
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -8193,6 +8210,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 3737944645222697628, guid: 372d9ca2ccbc9bf47845d3b0d110fee6,
         type: 3}
+    - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
+        type: 3}
+      propertyPath: AutomaticRestart
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: agents.Array.size
@@ -8216,7 +8238,7 @@ PrefabInstance:
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: redAgents.Array.size
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -9171,6 +9193,7 @@ PrefabInstance:
     m_RemovedComponents:
     - {fileID: 5599609062159471438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c, type: 3}
     - {fileID: 8523198099772787601, guid: 1d86bfcc61af61f4c8bfb03ac63a295c, type: 3}
+    - {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c, type: 3}
     m_RemovedGameObjects:
     - {fileID: 8130267161965727605, guid: 1d86bfcc61af61f4c8bfb03ac63a295c, type: 3}
     - {fileID: 7897321537368397963, guid: 1d86bfcc61af61f4c8bfb03ac63a295c, type: 3}
@@ -9744,6 +9767,10 @@ PrefabInstance:
         type: 3}
       insertIndex: 1
       addedObject: {fileID: 2127494124}
+    - targetCorrespondingSourceObject: {fileID: 1579076643992335290, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2127494127}
     - targetCorrespondingSourceObject: {fileID: 2283705414068236252, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       insertIndex: -1
@@ -9818,6 +9845,46 @@ MonoBehaviour:
     type: 3}
   cloneOffset: {x: -15, y: 0, z: 0}
   defaultEnvCount: 5
+--- !u!114 &2127494127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2127494118}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f78714ed07fe429797e8fced8d85f0d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLExample.RLTrainGameManager
+  mapManager: {fileID: 2127494119}
+  redAgentPrefab: {fileID: 532382130}
+  blueAgentPrefab: {fileID: 306861637}
+  foodPrefab: {fileID: 1664925298644982172, guid: ccb1af850bf461a4299e072011c94a13,
+    type: 3}
+  capsulePrefab: {fileID: 1664925298644982172, guid: d9464640f41cbc641a0bb9bab356bae6,
+    type: 3}
+  blueFood: 0
+  redFood: 0
+  redScore: 0
+  blueScore: 0
+  matchTime: 0
+  matchLength: 15
+  finished: 0
+  agentsPerTeam: 0
+  teamName: 
+  agents:
+  - {fileID: 939897211}
+  - {fileID: 2112326658}
+  redAgents:
+  - {fileID: 939897211}
+  blueAgents:
+  - {fileID: 2112326658}
+  foodList: []
+  capsules: []
+  started: 0
+  AutomaticRestart: 0
+  gameRecorder: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -18,11 +18,12 @@ class Args(BaseArgs):
     unity_env_path: str = "C:/Users/Mart9/Workspace/MAS/MAS2025-Assignment-3/Build/PacManCTF.exe"
 
 
+
 make_env = make_unity_env_factory(
     base_port=50030,
     scene_load="PacManRLTrainExample",
     physics_steps_per_action=5,
-    log_file_prefix="",  # Set to "" to disable logging files
+    log_file_prefix="train_instance_port_",  # Set to "" to disable logging files
 )
 
 if __name__ == "__main__":

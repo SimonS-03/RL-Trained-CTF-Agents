@@ -139,7 +139,8 @@ MonoBehaviour:
   discreteObservations: 
   continuousActions: 2
   discreteActions: 
-  inferencePolicy: {fileID: 0}
+  inferencePolicy: {fileID: 5022602860645237092, guid: da5657fbbd89fc54eaaa30653cfac2c5,
+    type: 3}
   gymSteps: 100
 --- !u!1 &5824477697522828855
 GameObject:
