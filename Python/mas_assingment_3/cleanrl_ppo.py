@@ -96,17 +96,57 @@ def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.
 
 
 class Agent(nn.Module):
+
+    """
+    PACMAN agent with attention inputs for neighbors and food
+
+    Observations:
+    - Local enemy agents: 
+    """
+
+    # Enemy attention embedding
+    EGO_CONTEXT_DIM = 5 # Added to each enemy observation for context: ghost, scared, score, carried food, flow cost
+    EGO_QUERY_DIM = 15
+    K_NEAREST = 4
+    DIMS_PER_ENEMY = 8
+    ENEMY_START = 15
+    ENEMY_END = ENEMY_START + K_NEAREST * DIMS_PER_ENEMY
+
     def __init__(self, envs: Any, hidden_size: int):
         super().__init__()
+
+        self.raw_obs_dims = envs.single_observation_space.shape
+
+        enemy_embed_dim = 64
+
+        # Enemy observation encoder
+        self.enemy_encoder = nn.Sequential(
+            layer_init(nn.Linear(self.DIMS_PER_ENEMY + self.EGO_CONTEXT_DIM, enemy_embed_dim)),
+            nn.ReLU(), # ?
+            layer_init(nn.Linear(64, enemy_embed_dim)),
+            nn.ReLU(),
+        )
+
+        # Ego encoder for query in attention
+        self.ego_encoder = nn.Sequential(
+            layer_init(nn.Linear(self.EGO_QUERY_DIM, enemy_embed_dim)),
+            nn.ReLU(),
+        )
+
+        # Attention layer
+        self.attention = nn.MultiheadAttention(embed_dim=enemy_embed_dim, num_heads=2, batch_first=True)
+
+        remaining_obs_dim = np.prod(envs.single_observation_space.shape) - (self.K_NEAREST * self.DIMS_PER_ENEMY)
+        input_dim = remaining_obs_dim + enemy_embed_dim
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), hidden_size)),
+            layer_init(nn.Linear(input_dim, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), hidden_size)),
+            layer_init(nn.Linear(input_dim, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
@@ -114,10 +154,44 @@ class Agent(nn.Module):
         )
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
+    def _process_enemies(self, x):
+        # Cross-attention for enemy inputs
+
+        enemy_raw = x[:, self.ENEMY_START:self.ENEMY_END].view(
+            -1, self.K_NEAREST, self.DIMS_PER_ENEMY
+        ) # first is batch size
+        ego_raw = x[:, :self.ENEMY_START]
+        ego_ctx = ego_raw[:, :5] # Here select the relevant data for enemy context
+
+        # Add self context to enemy observations
+        ego_repeated = ego_ctx.unsqueeze(1).repeat(1, self.K_NEAREST, 1) # (batch, 1, ctx) -> (batch, K, ctx)
+        enemy_combined = torch.cat([enemy_raw, ego_repeated], dim=-1) # (batch, K, ctx + enemy)
+
+        ego_embedding = self.ego_encoder(ego_raw).unsqueeze(1) # Query from ego embedding
+        enemy_embeddings = self.enemy_encoder(enemy_combined) # Key, Value from enemy + ego embedding
+
+        padding_mask = (enemy_raw.abs().sum(dim=-1) == 0)
+
+        attn_output, attn_weights = self.attention(
+            query = ego_embedding,
+            key = enemy_embeddings,
+            value = enemy_embeddings,
+            key_padding_mask=padding_mask
+        )
+        pooled_enemies = attn_output.squeeze(1)
+
+        all_indices = torch.arange(x.shape[1], device=x.device)
+        mask = (all_indices < self.ENEMY_START) | (all_indices >= self.ENEMY_END)
+        remaining_obs = x[:, mask]
+        
+        return torch.cat([remaining_obs, pooled_enemies], dim=-1)
+
     def get_value(self, x):
+        x = self._process_enemies(x)
         return self.critic(x)
 
     def get_action_and_value(self, x, action=None):
+        x = self._process_enemies(x)
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)

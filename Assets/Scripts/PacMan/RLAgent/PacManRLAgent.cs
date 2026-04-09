@@ -15,10 +15,11 @@ namespace PacMan.RLAgent
     {
         private PacManAgentManager _agent;
         private PacManMovementController _controller;
-        private bool _caughtTarget;
         private Vector2 _currentAction = Vector2.zero;
         private AgentCoordinator _coordinator;
+        private const float enemyObservations = 4;
         private float _currentFoodCount;
+        private float _currentFlowCost;
         private float _reward;
         private static readonly (int dx, int dz)[] rayDirections =
         {
@@ -53,6 +54,7 @@ namespace PacMan.RLAgent
         {
             _currentAction = Vector2.zero;
             _currentFoodCount = 0;
+            _currentFlowCost = 0;
             _reward = 0f;
         }
 
@@ -94,8 +96,10 @@ namespace PacMan.RLAgent
             // - Whether another agent is closer to closest food
 
             observation.AppendContinuous(thisAgent.IsGhost() ? 1f : -1f);
-            // observation.AppendContinuous(Mathf.Clamp01(thisAgent.GetScore())) // Score difference ??
+            observation.AppendContinuous(thisAgent.IsScared() ? 1f : -1f);
+            observation.AppendContinuous(Mathf.Clamp01(thisAgent.GetScore() / 100f)); // Score difference ??
             // observation.AppendContinuous(thisAgent.GetTimeRemaining() / 300); // Normalization ?
+            observation.AppendContinuous(Mathf.Clamp01(thisAgent.GetCarriedFoodCount() / 10f));
 
             observation.AppendContinuous(Mathf.Clamp(coordinator.GetFlowCost(thisAgent.transform.position)/30f, 0f, 1f));
             var flowDirection = coordinator.GetFlowDirection(thisAgent.transform.position);
@@ -105,15 +109,42 @@ namespace PacMan.RLAgent
             foreach(var (dx, dz) in rayDirections)
             {
                 var direction = dx *  Vector3.right + dz * Vector3.forward;
-                Physics.Raycast(thisAgent.transform.position, direction, out RaycastHit hitInfo, 10f);
-                observation.AppendContinuous(Mathf.Clamp01(hitInfo.distance / 10f));
+                bool intersects = Physics.Raycast(thisAgent.transform.position, direction, out RaycastHit hitInfo, 10f, LayerMask.GetMask("Obstacle"));
+                if(intersects)
+                    observation.AppendContinuous(Mathf.Clamp01(hitInfo.distance / 10f));
+                else
+                    observation.AppendContinuous(1f);
             }
 
             // Using deepsets : foodObjects = _agent.GetFoodObjects()
 
             // deepsets for each enemy: position, food, scared state (and until when), ghost state, powered up ? (not necessary if we know if we are scared ?)
 
-            
+            var visibleEnemyAgents = thisAgent.GetVisibleEnemyAgents();
+            int i = 0;
+            while(i < Mathf.Min(visibleEnemyAgents.Count, enemyObservations))
+            {
+                i++;
+                PacManAgentManager enemy = visibleEnemyAgents[i];
+                var relPos = enemy.transform.position - thisAgent.transform.position;
+                var relVel = enemy.GetVelocity() - thisAgent.GetVelocity();
+                observation.AppendContinuous(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
+                observation.AppendContinuous(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
+                observation.AppendContinuous(Mathf.Clamp(relVel.x / 5f, -1f, 1f));
+                observation.AppendContinuous(Mathf.Clamp(relVel.z / 5f, -1f, 1f));
+
+                observation.AppendContinuous(enemy.IsGhost() ? 1f : -1f);
+                observation.AppendContinuous(enemy.IsScared() ? 1f : -1f);
+                observation.AppendContinuous(Mathf.Clamp01(enemy.GetScaredRemainingDuration() / 20f));
+                observation.AppendContinuous(Mathf.Clamp01(enemy.GetCarriedFoodCount() / 10f));
+            }
+            while(i < enemyObservations)
+            {
+                for(int j = 0; j < 8; j++)
+                {
+                    observation.AppendContinuous(0f);
+                }
+            }
 
             return observation;
 
@@ -137,7 +168,7 @@ namespace PacMan.RLAgent
             var teamAgentManagers = thisAgent.GetTeamAgents(); //Agents in team, including this agent
             var friendlyAgentManagers = thisAgent.GetFriendlyAgents(); //Agents in team, except this agent
 
-            var visibleEnemyAgents = thisAgent.GetVisibleEnemyAgents(); // Enemy agents in LoS. Know percise information
+            // var visibleEnemyAgents = thisAgent.GetVisibleEnemyAgents(); // Enemy agents in LoS. Know percise information
             PacManObservations fetchEnemyObservations = thisAgent.GetEnemyObservations(); // Enemies out of LoS. Know partial information. 
             if (fetchEnemyObservations.Observations.Length > 0)
             {
@@ -157,6 +188,12 @@ namespace PacMan.RLAgent
                 _reward += newFood;
             // else reward if dropped in teritory or penalize if dead
             _currentFoodCount = _agent.GetCarriedFoodCount();
+
+            // flow cost dense reward
+            var newFlowCost = _coordinator.GetFlowCost(_agent.transform.position);
+            if(newFlowCost < _currentFlowCost) // Closer to food
+                _reward += (_currentFlowCost - newFlowCost) * 0.05f;
+            _currentFlowCost = newFlowCost;
             
             //Living reward
             _reward -= 0.01f;
