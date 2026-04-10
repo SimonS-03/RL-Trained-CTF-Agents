@@ -330,4 +330,5 @@ __marimo__/
 
 # NN files
 */results/
-
+results/*
+*.pt
