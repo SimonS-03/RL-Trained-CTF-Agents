@@ -10,6 +10,7 @@ using PacMan.Network.Generated;
 using Scripts.Map;
 using UnityEngine;
 using ProtoGameState = PacMan.Network.Generated.GameState;
+using Random = UnityEngine.Random;
 
 namespace PacMan.Game
 {
@@ -160,6 +161,10 @@ namespace PacMan.Game
             LogServerOwnershipLayout();
             gameRecorder?.StartRecording(this);
             matchTime = 0;
+            
+            // For training
+            TeamManager.Instance.DeRegisterAll();
+            TeamManager.Instance.RegisterAll();
         }
 
         public void StartGame()
@@ -432,14 +437,12 @@ namespace PacMan.Game
 
             if (finished && AutomaticRestart)
             {
-                foreach (var agent in agents)
-                {
-                    var ml_agent = agent.GetComponent<MLPacAgent>();
-                    if (ml_agent != null)
-                    {
-                        ml_agent.OnGameEnd();
-                    }
-                }
+                bool blueWin;
+                if (blueScore == redScore)
+                    blueWin = Random.Range(0, 1f) < .5f;
+                else
+                    blueWin = blueScore > redScore;
+                TeamManager.Instance.RewardEndOfGame(blueWin);
                 RestartGame();
             }
         }

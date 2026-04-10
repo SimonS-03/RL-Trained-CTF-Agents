@@ -9,7 +9,7 @@ using Unity.MLAgents.Sensors;
 using Unity.MLAgents.Actuators;
 
 
-public class MLPacAgent: Agent
+public class MLPacAgent: Unity.MLAgents.Agent
 {
     private PacManMovementController controller;
     private PacManAgentManager _agent;

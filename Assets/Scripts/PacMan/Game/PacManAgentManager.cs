@@ -19,7 +19,7 @@ namespace PacMan.Local
 
         private PacManAI _pacManAI;
         private bool _aiInitialized;
-        private MLPacAgent _mlPacAgent;
+        private FtwAgent _mlPacAgent;
         protected internal PacManMovementController Movement;
         protected internal PacManGameManager PacManGameManager;
         protected GameObject GhostObject;
@@ -42,8 +42,7 @@ namespace PacMan.Local
 
         public void Initialize(PacManGameManager pacManGameManager, bool deferAIInitialization = false)
         {
-            _mlPacAgent = GetComponent<MLPacAgent>();
-            _mlPacAgent.EndEpisode();
+            _mlPacAgent = GetComponent<FtwAgent>();
             PacManGameManager = pacManGameManager;
 
             Movement = GetComponent<PacManMovementController>();
@@ -87,7 +86,6 @@ namespace PacMan.Local
             {
                 return;
             }
-
             InitializeAI();
             _aiInitialized = true;
         }
@@ -414,6 +412,12 @@ namespace PacMan.Local
 
         public float GetTimeRemaining()
         {
+            if (PacManGameManager == null)
+            {
+                Debug.Log("Manager is null");
+                return 0f;
+            }
+
             if (PacManGameManager.matchLength == 0)
             {
                 return 0;
@@ -423,6 +427,8 @@ namespace PacMan.Local
 
         public int GetScore()
         {
+            if (PacManGameManager == null)
+                return 0;
             return TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue ? PacManGameManager.blueScore : PacManGameManager.redScore;
         }
 

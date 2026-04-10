@@ -56,7 +56,7 @@ namespace PacMan.Agent
             // friendlyAgentManager.GetVelocity(); // Given the damping, max velocity magnitude is around 2.34
             if (lastRespawnStep != 0 && lastRespawnStep == stepsSinceMatchStart)
             {
-                print("Detected respawn step");
+                //print("Detected respawn step");
             }
             // // replace the human input below with some AI stuff
             var x = 0;

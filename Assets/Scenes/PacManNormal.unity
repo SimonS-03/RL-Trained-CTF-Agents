@@ -1080,7 +1080,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebfbfa0c286248848af00f0f54b20e56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.Game.PacManManagerModeSelector
-  mode: 2
+  mode: 0
   playback_manager: {fileID: 1238940903}
   game_manager: {fileID: 892656390}
 --- !u!4 &40357987
@@ -20534,13 +20534,13 @@ PrefabInstance:
         type: 3}
       propertyPath: redAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: aadd1080f42ac9d42a023324b22710c8,
+      objectReference: {fileID: 3737944645222697628, guid: 339509690ca3c424da62d089a0cd90f8,
         type: 3}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: blueAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: f8715e691237e9f41a06c043acb2be33,
+      objectReference: {fileID: 3737944645222697628, guid: cf5a82ce3e8a9426fb1f8b2bc0d2012e,
         type: 3}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -22735,7 +22735,7 @@ MonoBehaviour:
     type: 3}
   m_PrefabInstance: {fileID: 892656389}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1401059963}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f6ae5c648c647ffac34718bc1e5d58a, type: 3}
@@ -34600,6 +34600,12 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1397113202}
   m_Mesh: {fileID: -1750125985355865389, guid: a856a5892aa0d6644bf02cd835e52c2e, type: 3}
+--- !u!1 &1401059963 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1579076643992335290, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
+    type: 3}
+  m_PrefabInstance: {fileID: 892656389}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1410600065
 GameObject:
   m_ObjectHideFlags: 0
@@ -49771,6 +49777,51 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2051250914}
   m_Mesh: {fileID: -1750125985355865389, guid: a856a5892aa0d6644bf02cd835e52c2e, type: 3}
+--- !u!1 &2053335747
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2053335749}
+  - component: {fileID: 2053335748}
+  m_Layer: 0
+  m_Name: TeamManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2053335748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2053335747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7373d48de534c4406b172b673fd52aa2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TeamManager
+  agentContainer: {fileID: 1401059963}
+--- !u!4 &2053335749
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2053335747}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.43932, y: -0, z: -0.86201}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2059149759
 GameObject:
   m_ObjectHideFlags: 0
@@ -51424,3 +51475,4 @@ SceneRoots:
   - {fileID: 40357987}
   - {fileID: 892656389}
   - {fileID: 1238940896}
+  - {fileID: 2053335749}
