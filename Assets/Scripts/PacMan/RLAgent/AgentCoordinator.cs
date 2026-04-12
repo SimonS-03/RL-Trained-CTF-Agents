@@ -3,10 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using Scripts.Map;
 using PacMan.Game;
-
+using PacMan.Local;
+using System.Threading.Tasks;
 
 // TODO: Particle filtering for enemy position estimation
 // Classification of food into categories (Gr15)
+// Weight randomization and input to the agent so that it specialises
+// Outputting what the agent is doing (reward based on how much time it said it) and feeding to the others
+// Population
+// 1 flow map / food ?
+// How do we choose the weight inputs for the final agent ? (the role)
+// LSTM memory
 
 namespace PacMan.RLAgent
 {
@@ -24,12 +31,15 @@ namespace PacMan.RLAgent
         private FlowField ff;
         private List<PacManRLAgent> agents;
         private List<Vector3> targetFood;
+        private readonly Dictionary<int, HashSet<int>> _reportedEnemyIdsByReporter = new();
+        private readonly Dictionary<int, PacManAgentManager> _enemyRefsByServerIndex = new();
 
         public bool isBlueTeam = true;
         [SerializeField]
         private int episodeLength; // in game steps, so more than Gym steps !!
         private int step;
         private int flowMapRebuildFreq = 10;
+        private bool isBuildingFlowField = false;
         private bool needsReset;
         public bool timedOut;
         public bool done;
@@ -108,10 +118,10 @@ namespace PacMan.RLAgent
             {
                 BuildFlowFields();
             }
-            else if(!new HashSet<Vector3>(currentTargetFood).SetEquals(new HashSet<Vector3>(targetFood)))
-            {
-                BuildFlowFields();
-            }
+            // else if(!new HashSet<Vector3>(currentTargetFood).SetEquals(new HashSet<Vector3>(targetFood)))
+            // {
+            //     BuildFlowFields();
+            // }
             targetFood = currentTargetFood;
         }
 
@@ -134,6 +144,71 @@ namespace PacMan.RLAgent
                 agents = new List<PacManRLAgent>();
             }
             agents.Add(agent);
+        }
+
+        public void ReportVisibleEnemies(PacManAgentManager reporter, IEnumerable<PacManAgentManager> visibleEnemies)
+        {
+            if (reporter == null || reporter.serverIndex < 0)
+            {
+                return;
+            }
+
+            if (!_reportedEnemyIdsByReporter.TryGetValue(reporter.serverIndex, out var reporterEnemyIds))
+            {
+                reporterEnemyIds = new HashSet<int>();
+                _reportedEnemyIdsByReporter[reporter.serverIndex] = reporterEnemyIds;
+            }
+            reporterEnemyIds.Clear();
+
+            if (visibleEnemies == null)
+            {
+                return;
+            }
+
+            foreach (var enemy in visibleEnemies)
+            {
+                if (enemy == null || !enemy.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (enemy.serverIndex >= 0)
+                {
+                    reporterEnemyIds.Add(enemy.serverIndex);
+                    _enemyRefsByServerIndex[enemy.serverIndex] = enemy;
+                }
+            }
+        }
+
+        public List<PacManAgentManager> GetSharedVisibleEnemies()
+        {
+            var sharedEnemyIds = new HashSet<int>();
+            foreach (var reportedIds in _reportedEnemyIdsByReporter.Values)
+            {
+                foreach (var enemyId in reportedIds)
+                {
+                    sharedEnemyIds.Add(enemyId);
+                }
+            }
+
+            var visibleEnemies = new List<PacManAgentManager>();
+            foreach (var enemyId in sharedEnemyIds)
+            {
+                if (!_enemyRefsByServerIndex.TryGetValue(enemyId, out var enemyRef))
+                {
+                    continue;
+                }
+
+                if (enemyRef == null || !enemyRef.gameObject.activeInHierarchy)
+                {
+                    _enemyRefsByServerIndex.Remove(enemyId);
+                    continue;
+                }
+
+                visibleEnemies.Add(enemyRef);
+            }
+
+            return visibleEnemies;
         }
 
         void OnDrawGizmos() {

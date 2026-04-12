@@ -328,3 +328,6 @@ __marimo__/
 .streamlit/secrets.toml
 
 local_builds/
+
+runs/
+Python/mas_assingment_3/runs

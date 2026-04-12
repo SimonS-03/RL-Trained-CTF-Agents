@@ -13,7 +13,7 @@ class Args(BaseArgs):
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     env_id: str = "AttentionRL"
     total_timesteps: int = 100000000
-    hidden_size: int = 64
+    hidden_size: int = 256
     num_envs: int = 100
     num_instances: int = 8
     unity_env_path: str = "/home/ilian/multiagents/A3_Group8/builds/linux_build/linux_build.x86_64"

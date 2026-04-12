@@ -17,6 +17,22 @@ from torch.utils.tensorboard import SummaryWriter
 from unity_vecenv.onnx_utilities.onnx_exporter import export_unity_onnx_simple
 
 
+@dataclass(frozen=True)
+class AttentionSpec:
+    name: str
+    start: int
+    count: int
+    item_dim: int
+
+    @property
+    def end(self) -> int:
+        return self.start + self.count * self.item_dim
+
+    @property
+    def raw_dim(self) -> int:
+        return self.count * self.item_dim
+
+
 @dataclass
 class Args:
     exp_name: str = "ppo"
@@ -103,54 +119,76 @@ class ModuleWrapper(nn.Module):
 
     def forward(self, x):
         # This is what will be recorded in the ONNX file
-        processed_x = self._agent_ref_container[0]._process_enemies(x)
+        processed_x = self._agent_ref_container[0]._process_attention(x)
         return self.mlp(processed_x)
 
 class Agent(nn.Module):
 
     """
-    PACMAN agent with attention inputs for neighbors and food
+    PACMAN agent with attention inputs for nearby enemies, food, and friendly agents.
 
-    Observations:
-    - Local enemy agents: 
+    Observations expected from Unity (PacManRLAgent.CollectObservation):
+    - Ego and map context: 18 dims
+    - Shared visible enemies: K=4, dim=8 each
+    - Food observations: K=6, dim=4 each
+    - Friendly observations: K=3, dim=8 each
+
+    Flattened index map:
+    - [0:18]   ego/map context
+    - [18:50]  enemies (4 x 8)
+    - [50:74]  food (6 x 4)
+    - [74:98]  friendlies (3 x 8)
     """
 
-    # Enemy attention embedding
-    EGO_CONTEXT_DIM = 5 # Added to each enemy observation for context: ghost, scared, score, carried food, flow cost
-    EGO_QUERY_DIM = 16
+    # Observation layout used by Unity PacManRLAgent. Keep these values in sync with C#.
+    EGO_CONTEXT_DIM = 5 # Added to each entity observation for context: ghost, scared, score, carried food, flow cost
+    EGO_QUERY_DIM = 18
     K_NEAREST = 4
     DIMS_PER_ENEMY = 8
-    ENEMY_START = 16
+    ENEMY_START = 18 
     ENEMY_END = ENEMY_START + K_NEAREST * DIMS_PER_ENEMY
+    K_NEAREST_FOOD = 6
+    DIMS_PER_FOOD = 4
+    FOOD_START = ENEMY_END
+    FOOD_END = FOOD_START + K_NEAREST_FOOD * DIMS_PER_FOOD
+    K_NEAREST_FRIENDLY = 3
+    DIMS_PER_FRIENDLY = 8
+    FRIENDLY_START = FOOD_END
+    FRIENDLY_END = FRIENDLY_START + K_NEAREST_FRIENDLY * DIMS_PER_FRIENDLY
 
     def __init__(self, envs: Any, hidden_size: int):
         super().__init__()
 
         self.raw_obs_dims = envs.single_observation_space.shape
+        self._attention_specs = (
+            AttentionSpec("enemies", self.ENEMY_START, self.K_NEAREST, self.DIMS_PER_ENEMY),
+            AttentionSpec("food", self.FOOD_START, self.K_NEAREST_FOOD, self.DIMS_PER_FOOD),
+            AttentionSpec("friendlies", self.FRIENDLY_START, self.K_NEAREST_FRIENDLY, self.DIMS_PER_FRIENDLY),
+        )
+        self.enemy_spec, self.food_spec, self.friendly_spec = self._attention_specs
 
         enemy_embed_dim = 64
 
-        # Enemy observation encoder
-        self.enemy_encoder = nn.Sequential(
-            layer_init(nn.Linear(self.DIMS_PER_ENEMY + self.EGO_CONTEXT_DIM, enemy_embed_dim)),
-            nn.ReLU(), # ?
-            layer_init(nn.Linear(64, enemy_embed_dim)),
-            nn.ReLU(),
-        )
-
-        # Ego encoder for query in attention
+        # Query encoder for the agent's own state.
         self.ego_encoder = nn.Sequential(
             layer_init(nn.Linear(self.EGO_QUERY_DIM, enemy_embed_dim)),
             nn.ReLU(),
         )
-        self.ego_norm = nn.LayerNorm(enemy_embed_dim)
-        self.enemy_norm = nn.LayerNorm(enemy_embed_dim)
+        self.query_norm = nn.LayerNorm(enemy_embed_dim)
+        self.entity_norm = nn.LayerNorm(enemy_embed_dim)
+
+        # Entity encoders are separate because food, enemies, and allies can use different raw feature sizes.
+        self.entity_encoders = nn.ModuleDict({
+            spec.name: self._build_entity_encoder(spec.item_dim, enemy_embed_dim)
+            for spec in self._attention_specs
+        })
 
         # Attention layer
         self.attention = nn.MultiheadAttention(embed_dim=enemy_embed_dim, num_heads=2, batch_first=True)
 
-        remaining_obs_dim = np.prod(envs.single_observation_space.shape) - (self.K_NEAREST * self.DIMS_PER_ENEMY)
-        input_dim = remaining_obs_dim + enemy_embed_dim
+        total_attention_raw_dim = sum(spec.raw_dim for spec in self._attention_specs)
+        remaining_obs_dim = int(np.prod(envs.single_observation_space.shape)) - total_attention_raw_dim
+        input_dim = remaining_obs_dim + enemy_embed_dim * len(self._attention_specs)
         self.internal_critic_mlp = nn.Sequential(
             layer_init(nn.Linear(input_dim, hidden_size)),
             nn.Tanh(),
@@ -172,50 +210,73 @@ class Agent(nn.Module):
 
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
-    def _process_enemies(self, x):
-        # Cross-attention for enemy inputs
-
-        enemy_raw = x[:, self.ENEMY_START:self.ENEMY_END].view(
-            -1, self.K_NEAREST, self.DIMS_PER_ENEMY
-        ) # first is batch size
-        ego_raw = x[:, :self.ENEMY_START]
-        ego_ctx = ego_raw[:, :5] # Here select the relevant data for enemy context
-
-        # Add self context to enemy observations
-        ego_repeated = ego_ctx.unsqueeze(1).repeat(1, self.K_NEAREST, 1) # (batch, 1, ctx) -> (batch, K, ctx)
-        enemy_combined = torch.cat([enemy_raw, ego_repeated], dim=-1) # (batch, K, ctx + enemy)
-
-        ego_embedding = self.ego_norm(self.ego_encoder(ego_raw)).unsqueeze(1) # Query from ego embedding
-        enemy_embeddings = self.enemy_norm(self.enemy_encoder(enemy_combined)) # Key, Value from enemy + ego embedding
-
-        padding_mask = (enemy_raw.abs().sum(dim=-1) == 0)
-        
-        all_masked = padding_mask.all(dim=-1) # Fix for the case where no enemy is visible : we set the mask to make the first one visible so the attention layer doesn't crash
-        padding_mask[all_masked, 0] = False
-
-        attn_output, attn_weights = self.attention(
-            query = ego_embedding,
-            key = enemy_embeddings,
-            value = enemy_embeddings,
-            key_padding_mask=padding_mask
+    def _build_entity_encoder(self, raw_feature_dim: int, embed_dim: int) -> nn.Sequential:
+        return nn.Sequential(
+            layer_init(nn.Linear(raw_feature_dim + self.EGO_CONTEXT_DIM, embed_dim)),
+            nn.ReLU(),
+            layer_init(nn.Linear(embed_dim, embed_dim)),
+            nn.ReLU(),
         )
-        pooled_enemies = attn_output.squeeze(1)
 
-        # all_indices = torch.arange(x.shape[1], device=x.device)
-        # mask = (all_indices < self.ENEMY_START) | (all_indices >= self.ENEMY_END)
-        # remaining_obs = x[:, mask]
-        ego_part = x[:, :self.ENEMY_START]
-        other_part = x[:, self.ENEMY_END:]
-        remaining_obs = torch.cat([ego_part, other_part], dim=-1)
-        
-        return torch.cat([remaining_obs, pooled_enemies], dim=-1)
+    def _extract_entity_context(self, x):
+        return x[:, :self.EGO_CONTEXT_DIM]
+
+    def _remove_attention_segments(self, x):
+        segments = sorted(self._attention_specs, key=lambda spec: spec.start)
+        remaining_parts = []
+        cursor = 0
+
+        for spec in segments:
+            if cursor < spec.start:
+                remaining_parts.append(x[:, cursor:spec.start])
+            cursor = spec.end
+
+        if cursor < x.shape[1]:
+            remaining_parts.append(x[:, cursor:])
+
+        if not remaining_parts:
+            return x.new_zeros((x.shape[0], 0))
+
+        return torch.cat(remaining_parts, dim=-1)
+
+    def _process_attention_block(self, x, spec: AttentionSpec):
+        entity_raw = x[:, spec.start:spec.end].view(-1, spec.count, spec.item_dim)
+        ego_raw = x[:, :self.EGO_QUERY_DIM]
+        ego_ctx = self._extract_entity_context(x)
+
+        ego_repeated = ego_ctx.unsqueeze(1).expand(-1, spec.count, -1)
+        entity_combined = torch.cat([entity_raw, ego_repeated], dim=-1)
+
+        query = self.query_norm(self.ego_encoder(ego_raw)).unsqueeze(1)
+        key_value = self.entity_norm(self.entity_encoders[spec.name](entity_combined))
+
+        padding_mask = entity_raw.abs().sum(dim=-1) == 0
+        all_masked = padding_mask.all(dim=-1)
+        if all_masked.any():
+            padding_mask[all_masked, 0] = False
+
+        attn_output, _ = self.attention(
+            query=query,
+            key=key_value,
+            value=key_value,
+            key_padding_mask=padding_mask,
+        )
+        return attn_output.squeeze(1)
+
+    def _process_attention(self, x):
+        enemy_summary = self._process_attention_block(x, self.enemy_spec)
+        food_summary = self._process_attention_block(x, self.food_spec)
+        friendly_summary = self._process_attention_block(x, self.friendly_spec)
+        remaining_obs = self._remove_attention_segments(x)
+
+        return torch.cat([remaining_obs, enemy_summary, food_summary, friendly_summary], dim=-1)
 
     def get_value(self, x):
         # x = self._process_enemies(x)
         return self.critic(x)
 
     def get_action_and_value(self, x, action=None):
-        processed_x = self._process_enemies(x)
+        processed_x = self._process_attention(x)
         # action_mean = self.actor_mean(x) # actor_mean handles enemy processing in the wrapper
         action_mean = self.internal_actor_mlp(processed_x)
         action_logstd = self.actor_logstd.expand_as(action_mean)

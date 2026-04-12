@@ -135,13 +135,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b05fe856fe8f4cf52bee33d8f613bf47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLAgent.PacManRLAgent
-  continuousObservations: 47
+  continuousObservations: 98
   discreteObservations: 
   continuousActions: 2
   discreteActions: 
-  inferencePolicy: {fileID: 5022602860645237092, guid: f71e891072df44c15adda11f93e8f1e3,
-    type: 3}
-  gymSteps: 100
+  inferencePolicy: {fileID: 0}
+  gymSteps: 300
 --- !u!1 &5824477697522828855
 GameObject:
   m_ObjectHideFlags: 0
