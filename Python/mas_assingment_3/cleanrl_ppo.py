@@ -94,6 +94,17 @@ def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
+class ModuleWrapper(nn.Module):
+    def __init__(self, agent_ref, actor_mlp):
+        super().__init__()
+        # We store a reference to the agent's attention logic
+        self.mlp = actor_mlp
+        self._agent_ref_container = [agent_ref] # Using an underscore avoids infinite recursion when pytorch looks into submodules apprently
+
+    def forward(self, x):
+        # This is what will be recorded in the ONNX file
+        processed_x = self._agent_ref_container[0]._process_enemies(x)
+        return self.mlp(processed_x)
 
 class Agent(nn.Module):
 
@@ -106,10 +117,10 @@ class Agent(nn.Module):
 
     # Enemy attention embedding
     EGO_CONTEXT_DIM = 5 # Added to each enemy observation for context: ghost, scared, score, carried food, flow cost
-    EGO_QUERY_DIM = 15
+    EGO_QUERY_DIM = 16
     K_NEAREST = 4
     DIMS_PER_ENEMY = 8
-    ENEMY_START = 15
+    ENEMY_START = 16
     ENEMY_END = ENEMY_START + K_NEAREST * DIMS_PER_ENEMY
 
     def __init__(self, envs: Any, hidden_size: int):
@@ -132,26 +143,33 @@ class Agent(nn.Module):
             layer_init(nn.Linear(self.EGO_QUERY_DIM, enemy_embed_dim)),
             nn.ReLU(),
         )
+        self.ego_norm = nn.LayerNorm(enemy_embed_dim)
+        self.enemy_norm = nn.LayerNorm(enemy_embed_dim)
 
         # Attention layer
         self.attention = nn.MultiheadAttention(embed_dim=enemy_embed_dim, num_heads=2, batch_first=True)
 
         remaining_obs_dim = np.prod(envs.single_observation_space.shape) - (self.K_NEAREST * self.DIMS_PER_ENEMY)
         input_dim = remaining_obs_dim + enemy_embed_dim
-        self.critic = nn.Sequential(
+        self.internal_critic_mlp = nn.Sequential(
             layer_init(nn.Linear(input_dim, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, 1), std=1.0),
         )
-        self.actor_mean = nn.Sequential(
+        self.internal_actor_mlp = nn.Sequential(
             layer_init(nn.Linear(input_dim, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, np.prod(envs.single_action_space.shape)), std=0.01),
         )
+
+        # ONNX export searches for this specific function so all the logic is wrapped inside it.
+        self.actor_mean = ModuleWrapper(self, self.internal_actor_mlp)
+        self.critic = ModuleWrapper(self, self.internal_critic_mlp)
+
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
 
     def _process_enemies(self, x):
@@ -167,10 +185,13 @@ class Agent(nn.Module):
         ego_repeated = ego_ctx.unsqueeze(1).repeat(1, self.K_NEAREST, 1) # (batch, 1, ctx) -> (batch, K, ctx)
         enemy_combined = torch.cat([enemy_raw, ego_repeated], dim=-1) # (batch, K, ctx + enemy)
 
-        ego_embedding = self.ego_encoder(ego_raw).unsqueeze(1) # Query from ego embedding
-        enemy_embeddings = self.enemy_encoder(enemy_combined) # Key, Value from enemy + ego embedding
+        ego_embedding = self.ego_norm(self.ego_encoder(ego_raw)).unsqueeze(1) # Query from ego embedding
+        enemy_embeddings = self.enemy_norm(self.enemy_encoder(enemy_combined)) # Key, Value from enemy + ego embedding
 
         padding_mask = (enemy_raw.abs().sum(dim=-1) == 0)
+        
+        all_masked = padding_mask.all(dim=-1) # Fix for the case where no enemy is visible : we set the mask to make the first one visible so the attention layer doesn't crash
+        padding_mask[all_masked, 0] = False
 
         attn_output, attn_weights = self.attention(
             query = ego_embedding,
@@ -180,25 +201,29 @@ class Agent(nn.Module):
         )
         pooled_enemies = attn_output.squeeze(1)
 
-        all_indices = torch.arange(x.shape[1], device=x.device)
-        mask = (all_indices < self.ENEMY_START) | (all_indices >= self.ENEMY_END)
-        remaining_obs = x[:, mask]
+        # all_indices = torch.arange(x.shape[1], device=x.device)
+        # mask = (all_indices < self.ENEMY_START) | (all_indices >= self.ENEMY_END)
+        # remaining_obs = x[:, mask]
+        ego_part = x[:, :self.ENEMY_START]
+        other_part = x[:, self.ENEMY_END:]
+        remaining_obs = torch.cat([ego_part, other_part], dim=-1)
         
         return torch.cat([remaining_obs, pooled_enemies], dim=-1)
 
     def get_value(self, x):
-        x = self._process_enemies(x)
+        # x = self._process_enemies(x)
         return self.critic(x)
 
     def get_action_and_value(self, x, action=None):
-        x = self._process_enemies(x)
-        action_mean = self.actor_mean(x)
+        processed_x = self._process_enemies(x)
+        # action_mean = self.actor_mean(x) # actor_mean handles enemy processing in the wrapper
+        action_mean = self.internal_actor_mlp(processed_x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         if action is None:
             action = probs.sample()
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.internal_critic_mlp(processed_x)
 
 
 
@@ -394,7 +419,7 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
+        print("SPS:", int(global_step / (time.time() - start_time)), ", Avg Ep Return:", round(sum_episode_return / episode_count, 4), ", Global Step:", global_step, round(global_step/args.total_timesteps * 100),"%, Remaining:", round((args.total_timesteps - global_step) / global_step * (time.time() - start_time) / 60), "min")
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     export_unity_onnx_simple(
