@@ -38,13 +38,10 @@ namespace PacMan.RLExample
         protected override void GymReset()
         {
             var localRandomPosition = new Vector3(Random.Range(-13f, -2.5f), 0.4f, Random.Range(-5f, 5f));
-            _agent.transform.position = _agent.PacManGameManager.transform.TransformPoint(localRandomPosition);
+            // _agent.transform.position = _agent.PacManGameManager.transform.TransformPoint(localRandomPosition);
             _caughtTarget = false;
 
             _target = _agent.PacManGameManager.agents.Find(agent => agent.gameObject != gameObject);
-
-            localRandomPosition = new Vector3(Random.Range(-13f, -2.5f), 0.4f, Random.Range(-5f, 5f));
-            _target.transform.position = _agent.PacManGameManager.transform.TransformPoint(localRandomPosition);
             _distancePrevious = DistanceToTarget(_target, _agent).magnitude;
         }
 
@@ -82,7 +79,12 @@ namespace PacMan.RLExample
 
         protected override float CollectReward()
         {
-            if (_caughtTarget) return 0.75f;
+            if (_caughtTarget)
+            {
+                _caughtTarget = false;
+                return 0.1f;
+            }
+
             var distanceCurrent = DistanceToTarget(_target, _agent).magnitude;
             var potentialReward = _distancePrevious - distanceCurrent;
             return potentialReward / gymSteps * 0.25f;
@@ -90,7 +92,7 @@ namespace PacMan.RLExample
 
         protected override EnvironmentState GymStep()
         {
-            if (_caughtTarget) return EnvironmentState.Done;
+            if (_agent.PacManGameManager.finished) return EnvironmentState.Done;
             return EnvironmentState.Running;
         }
 

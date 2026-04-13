@@ -37,7 +37,6 @@ namespace PacMan.Game
         public void ResetAgent(GameObject agent)
         {
             var manager = agent.GetComponent<PacManAgentManager>();
-            agent.transform.position = manager.globalStartPosition;
             manager.foodCarried = new List<GameObject>();
             manager.isScared = false;
             manager.scaredUntil = 0;

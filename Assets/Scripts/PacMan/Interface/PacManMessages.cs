@@ -30,6 +30,7 @@ namespace PacMan.Interface
             public float ReadingDispersion;
             public bool HasFood;
             public int ServerIndex;
+            public int LastRespawnStep;
         }
     }
 }

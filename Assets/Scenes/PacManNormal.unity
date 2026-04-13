@@ -1164,7 +1164,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebfbfa0c286248848af00f0f54b20e56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.Game.PacManManagerModeSelector
-  mode: 0
+  mode: 2
   playback_manager: {fileID: 1238940903}
   game_manager: {fileID: 892656390}
 --- !u!4 &40357987

@@ -136,3 +136,13 @@ and add flags and arguments after as described above. Note that you can access t
 ```
 ./myApp.app/Contents/MacOS/PacManCTF -mode server & ./myApp.app/Contents/MacOS/PacManCTF -mode client & ./myApp.app/Contents/MacOS/PacManCTF -mode client
 ```
+### Executable permissions for external executables
+
+If you have an executable from a different machine your terminal will probably complain about permissions, in such case use the following commands in the terminal to be able to run the app.
+
+Assuming a build called "Mac.app":
+
+```
+sudo xattr -dr com.apple.quarantine Mac.app
+sudo chmod +x ./Mac.app/Contents/MacOS/PacManCTF
+```

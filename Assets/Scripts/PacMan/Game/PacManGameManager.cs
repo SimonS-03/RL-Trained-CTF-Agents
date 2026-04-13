@@ -28,9 +28,10 @@ namespace PacMan.Game
         public int redScore;
         public int blueScore;
 
-        protected float StartTime;
         public float matchTime;
         public float matchLength = 240; //From original 3000 / 4
+        private int _stepsSinceMatchStart;
+        private int _stepsRemaining;
 
         public bool finished = false;
         public int agentsPerTeam;
@@ -60,11 +61,12 @@ namespace PacMan.Game
         public ManagerMode ActiveMode => CurrentMode;
         public bool UsesManualSimulation => CurrentMode == ManagerMode.Server || CurrentMode == ManagerMode.Client;
         public float CurrentSimulationTime => matchTime;
+        public int CurrentSimulationStep => _stepsSinceMatchStart;
+        public int RemainingSimulationSteps => _stepsRemaining;
         protected virtual bool ShouldDeferAgentAIInitialization => false;
 
         void Awake()
         {
-            StartTime = Time.time;
             _pacManWorker = GetComponent<PacManWorker>();
             _selector = FindFirstObjectByType<PacManManagerModeSelector>();
             ConfigureCommandLineRecording();
@@ -139,7 +141,7 @@ namespace PacMan.Game
             }
         }
 
-        public void RestartGame()
+        public virtual void RestartGame()
         {
             EnsureCollectionsInitialized();
             foodList.Where(food => food != null).ToList().ForEach(food => _pacManWorker.RemoveObject(food));
@@ -148,16 +150,22 @@ namespace PacMan.Game
             capsules.Clear();
             StartGame();
             SynchronizeAgentServerIndices();
-            agents.ForEach(agent => agent.Initialize(this, ShouldDeferAgentAIInitialization));
+            agents.ForEach(agent => agent.Initialize(this, true));
+            agents.ForEach(agent => agent.UpdateObservations());
+            if (!ShouldDeferAgentAIInitialization)
+            {
+                agents.ForEach(agent => agent.InitializeAIIfNeeded());
+            }
+
             LogServerOwnershipLayout();
             gameRecorder?.StartRecording(this);
+            matchTime = 0;
         }
 
         public void StartGame()
         {
             EnsureCollectionsInitialized();
-            StartTime = Time.time;
-            matchTime = 0f;
+            ApplyAuthoritativeSimulationState(0f, 0, CalculateStepsRemaining(0, Time.fixedDeltaTime, matchLength), matchLength);
             _waitingForClientActions = false;
             _loggedServerOwnershipLayout = false;
             _loggedOwnershipWarnings.Clear();
@@ -168,7 +176,11 @@ namespace PacMan.Game
 
             if (agents.Count == mapManager.startPositions.Count) //TODO: Variable agent counts map to map?
             {
-                agents.ForEach(agent => _pacManWorker.ResetAgent(agent.gameObject));
+                agents.ForEach(agent =>
+                {
+                    _pacManWorker.ResetAgent(agent.gameObject);
+                    RespawnAgentAtStart(agent);
+                });
             }
 
             agentsPerTeam = mapManager.startPositions.Count / 2;
@@ -279,7 +291,9 @@ namespace PacMan.Game
             var startsTransform = mapManager != null ? mapManager.transform.Find("Starts") : null;
             var startsOrigin = startsTransform != null
                 ? startsTransform.position
-                : mapManager != null ? mapManager.transform.position : Vector3.zero;
+                : mapManager != null
+                    ? mapManager.transform.position
+                    : Vector3.zero;
 
             for (var i = 0; i < count; i++)
             {
@@ -571,6 +585,37 @@ namespace PacMan.Game
         protected void AdvanceSimulationClock(float deltaTime)
         {
             matchTime += deltaTime;
+            _stepsSinceMatchStart += 1;
+            _stepsRemaining = CalculateStepsRemaining(_stepsSinceMatchStart, Time.fixedDeltaTime, matchLength);
+        }
+
+        public void ApplyAuthoritativeSimulationState(float authoritativeTime, int stepsSinceMatchStart, int stepsRemaining, float authoritativeMatchLength)
+        {
+            matchLength = authoritativeMatchLength;
+            matchTime = authoritativeTime;
+            _stepsSinceMatchStart = Mathf.Max(0, stepsSinceMatchStart);
+            _stepsRemaining = Mathf.Max(0, stepsRemaining);
+        }
+
+        public int EstimateStepsSinceMatchStart(float authoritativeTime, float fixedDeltaTime)
+        {
+            if (authoritativeTime <= 0f || fixedDeltaTime <= 0f)
+            {
+                return 0;
+            }
+
+            return Mathf.Max(0, Mathf.RoundToInt(authoritativeTime / fixedDeltaTime));
+        }
+
+        public int CalculateStepsRemaining(int stepsSinceMatchStart, float fixedDeltaTime, float totalMatchLength)
+        {
+            if (totalMatchLength <= 0f || fixedDeltaTime <= 0f)
+            {
+                return 0;
+            }
+
+            var totalSteps = Mathf.FloorToInt(totalMatchLength / fixedDeltaTime) + 1;
+            return Mathf.Max(0, totalSteps - Mathf.Max(0, stepsSinceMatchStart));
         }
 
         private List<ProtoGameState> BuildGameStatesForClients()
@@ -699,6 +744,12 @@ namespace PacMan.Game
             {
                 capsules.Add(_pacManWorker.CreateEdible(gameObject, capsulePrefab, capsulesObject.position + transform.localPosition));
             }
+        }
+
+        public virtual void RespawnAgentAtStart(PacManAgentManager agent)
+        {
+            agent.transform.position = agent.globalStartPosition;
+            agent.SetLastRespawnStep( CurrentSimulationStep);
         }
 
         public void DropFood(PacManAgentManager pacManAgentAgent, bool success)
