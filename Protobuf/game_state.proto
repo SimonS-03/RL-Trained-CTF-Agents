@@ -21,6 +21,9 @@ message GameState {
   string client_id = 6;
   int32 controlled_agent_index = 7;
   float fixed_delta_time = 8;
+  int32 steps_since_match_start = 9;
+  int32 steps_remaining = 10;
+  optional float match_length = 11;
 }
 
 message ProtoPacManAction {
@@ -42,6 +45,7 @@ message ProtoPacManState {
   string tag = 11;
   ProtoPacManObservations observations = 12;
   int32 server_index = 13;
+  int32 last_respawn_step = 14;
 }
 
 message ProtoPacManObservations {
@@ -59,6 +63,7 @@ message ProtoPacManObservation {
   float reading_dispersion = 5;
   bool has_food = 6;
   int32 server_index = 7;
+  int32 last_respawn_step = 8;
 }
 
 message ProtoEdible {

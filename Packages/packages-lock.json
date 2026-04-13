@@ -7,13 +7,13 @@
       "dependencies": {}
     },
     "com.mka.gymvecenv": {
-      "version": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.2",
+      "version": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.3",
       "depth": 0,
       "source": "git",
       "dependencies": {
         "com.unity.ai.inference": "2.4.1"
       },
-      "hash": "e18a143803ad87b8ff636830b422f9eb0f30c12e"
+      "hash": "623736b53bc2c7b0169a39882fb67dbf96d3c890"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",

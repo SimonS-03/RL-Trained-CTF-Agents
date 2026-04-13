@@ -58,8 +58,7 @@ namespace PacMan
                 var agent = agents[agentIndex].GetComponent<PacManAgentManager>();
                 if (controlledAgentSet.Contains(agentIndex))
                 {
-                    var filteredObservations = FilterObservationsForHiddenEnemies(agent.GetEnemyObservations(), enemyAgentIndices, visibleEnemyIndices);
-                    storeState.Agents.Add(PacManStateFromObject(agent, filteredObservations));
+                    storeState.Agents.Add(PacManStateFromObject(agent));
                     continue;
                 }
 
@@ -135,6 +134,8 @@ namespace PacMan
                 throw new ArgumentNullException(nameof(readState));
             }
 
+            ApplyAuthoritativeSimulationState(gameManager, readState);
+
             var agentCount = Math.Min(readState.Agents.Count, gameManager.agents.Count);
             for (int i = 0; i < agentCount; i++)
             {
@@ -175,7 +176,8 @@ namespace PacMan
                 Velocity = Vector3FromUnity(rigidBody.linearVelocity),
                 AngularVelocity = Vector3FromUnity(rigidBody.angularVelocity),
                 Tag = agent.tag ?? string.Empty,
-                ServerIndex = agent.serverIndex
+                ServerIndex = agent.serverIndex,
+                LastRespawnStep = agent.GetLastRespawnStep()
             };
 
             if (includeObservations)
@@ -191,7 +193,8 @@ namespace PacMan
             return new ProtoPacManState
             {
                 Tag = agent.tag ?? string.Empty,
-                ServerIndex = agent.serverIndex
+                ServerIndex = agent.serverIndex,
+                LastRespawnStep = agent.GetLastRespawnStep()
             };
         }
 
@@ -199,6 +202,7 @@ namespace PacMan
         {
             agent.tag = state?.Tag ?? agent.tag;
             agent.serverIndex = ResolveServerIndex(state, fallbackServerIndex);
+            agent.SetLastRespawnStep(state?.LastRespawnStep ?? 0);
 
             var hasAuthoritativeState = state?.Transform != null;
             agent.gameObject.SetActive(hasAuthoritativeState);
@@ -245,9 +249,12 @@ namespace PacMan
 
             var storeState = new ProtoGameState
             {
-                Time = gameManager.matchTime,
+                MatchTime = gameManager.matchTime,
                 MapName = mapName ?? string.Empty,
-                FixedDeltaTime = Time.fixedDeltaTime
+                FixedDeltaTime = Time.fixedDeltaTime,
+                StepsSinceMatchStart = gameManager.CurrentSimulationStep,
+                StepsRemaining = gameManager.RemainingSimulationSteps,
+                MatchLength = gameManager.matchLength
             };
 
             storeState.Food.Add(gameManager.foodList.Select(food => EdibleFromObject(food)));
@@ -324,29 +331,6 @@ namespace PacMan
             return visibleEnemyIndices;
         }
 
-        private static PacManObservations FilterObservationsForHiddenEnemies(PacManObservations observations, IReadOnlyList<int> enemyAgentIndices, HashSet<int> visibleEnemyIndices)
-        {
-            var sourceObservations = observations.Observations ?? Array.Empty<PacManObservation>();
-            var observationCount = Math.Min(sourceObservations.Length, enemyAgentIndices.Count);
-            var filteredObservations = sourceObservations
-                .Take(observationCount)
-                .Where((observation, index) =>
-                {
-                    var observationServerIndex = observation.ServerIndex;
-                    var candidateIndex = observationServerIndex >= 0 ? observationServerIndex : enemyAgentIndices[index];
-                    return !visibleEnemyIndices.Contains(candidateIndex);
-                })
-                .ToArray();
-
-            return new PacManObservations
-            {
-                Index = observations.Index,
-                ObservationFixedTime = observations.ObservationFixedTime,
-                AgentServerIndex = observations.AgentServerIndex,
-                Observations = filteredObservations
-            };
-        }
-
         private static ProtoPacManObservation ObservationFromValue(PacManObservation observation)
         {
             return new ProtoPacManObservation
@@ -356,7 +340,8 @@ namespace PacMan
                 Visible = observation.Visible,
                 ReadingDispersion = observation.ReadingDispersion,
                 HasFood = observation.HasFood,
-                ServerIndex = observation.ServerIndex
+                ServerIndex = observation.ServerIndex,
+                LastRespawnStep = observation.LastRespawnStep
             };
         }
 
@@ -377,7 +362,8 @@ namespace PacMan
             {
                 return new PacManObservation
                 {
-                    ServerIndex = -1
+                    ServerIndex = -1,
+                    LastRespawnStep = 0
                 };
             }
 
@@ -388,8 +374,32 @@ namespace PacMan
                 Visible = protoObservation.Visible,
                 ReadingDispersion = protoObservation.ReadingDispersion,
                 HasFood = protoObservation.HasFood,
-                ServerIndex = protoObservation.ServerIndex
+                ServerIndex = protoObservation.ServerIndex,
+                LastRespawnStep = protoObservation.LastRespawnStep
             };
+        }
+
+        private static void ApplyAuthoritativeSimulationState(PacManGameManager gameManager, ProtoGameState readState)
+        {
+            var fixedDeltaTime = readState.FixedDeltaTime > 0f ? readState.FixedDeltaTime : Time.fixedDeltaTime;
+            var authoritativeMatchTime = readState.MatchTime;
+            var authoritativeMatchLength = readState.HasMatchLength ? readState.MatchLength : gameManager.matchLength;
+
+            var stepsSinceMatchStart = readState.StepsSinceMatchStart;
+            if (stepsSinceMatchStart == 0 && authoritativeMatchTime > 0f)
+            {
+                stepsSinceMatchStart = gameManager.EstimateStepsSinceMatchStart(authoritativeMatchTime, fixedDeltaTime);
+            }
+
+            var stepsRemaining = readState.StepsRemaining;
+            if (stepsRemaining == 0 &&
+                authoritativeMatchLength > 0f &&
+                authoritativeMatchTime <= authoritativeMatchLength)
+            {
+                stepsRemaining = gameManager.CalculateStepsRemaining(stepsSinceMatchStart, fixedDeltaTime, authoritativeMatchLength);
+            }
+
+            gameManager.ApplyAuthoritativeSimulationState(authoritativeMatchTime, stepsSinceMatchStart, stepsRemaining, authoritativeMatchLength);
         }
 
         private static int ResolveServerIndex(ProtoPacManState state, int fallbackServerIndex)
@@ -471,6 +481,18 @@ namespace PacMan
             }
 
             return new Quaternion(quaternion.X, quaternion.Y, quaternion.Z, quaternion.W);
+        }
+    }
+}
+
+namespace PacMan.Network.Generated
+{
+    public sealed partial class GameState
+    {
+        public float MatchTime
+        {
+            get => Time;
+            set => Time = value;
         }
     }
 }

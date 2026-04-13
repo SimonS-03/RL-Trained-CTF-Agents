@@ -77,7 +77,10 @@ namespace PacMan
                 GUILayout.Label("Team Name: " + gameManager.GetDisplayTeamName(), style);
             }
 
-            GUILayout.Label("Time: " + gameManager.matchTime.ToString("0.00"), style);
+            var remainingTime = gameManager.matchLength <= 0f
+                ? 0f
+                : Mathf.Max(0f, gameManager.matchLength - gameManager.matchTime);
+            GUILayout.Label("Time Remaining: " + remainingTime.ToString("0.00"), style);
             var redScore = gameManager.redScore;
             var blueScore = gameManager.blueScore;
 

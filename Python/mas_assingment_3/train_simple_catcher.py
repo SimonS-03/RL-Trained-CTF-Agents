@@ -18,11 +18,12 @@ class Args(BaseArgs):
     unity_env_path: str = "/Users/ilian/dev/multiagent-1/A3_Group8/builds/macos_build.app/Contents/MacOS/PacManCTF"
 
 
+
 make_env = make_unity_env_factory(
     base_port=50010,
     scene_load="Training_2",
     physics_steps_per_action=5,
-    log_file_prefix="",  # Set to "" to disable logging files
+    log_file_prefix="train_instance_port_",  # Set to "" to disable logging files
 )
 
 if __name__ == "__main__":
