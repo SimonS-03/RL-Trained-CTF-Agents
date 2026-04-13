@@ -66,14 +66,14 @@ public class TeamManager : MonoBehaviour
     {
         if (blueWin)
         {
-            blueTeam.SetGroupReward(1f);
-            redTeam.SetGroupReward(-1f);
+            blueTeam.SetGroupReward(2f);
+            redTeam.SetGroupReward(-2f);
             Debug.Log("Game ended in favour of blue team");
         }
         else
         {
-            blueTeam.SetGroupReward(-1f);
-            redTeam.SetGroupReward(1f);
+            blueTeam.SetGroupReward(-2f);
+            redTeam.SetGroupReward(2f);
             Debug.Log("Game ended in favour of red team");
         }
         

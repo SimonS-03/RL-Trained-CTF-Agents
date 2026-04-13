@@ -10,6 +10,7 @@ behaviors:
       lambd: 0.95
       num_epoch: 3
       learning_rate_schedule: linear
+
     network_settings:
       normalize: true
       hidden_units: 256
@@ -28,14 +29,10 @@ behaviors:
       window: 10
       play_against_latest_model_ratio: 0.5
       initial_elo: 500
-      #pbt: 
-      #  enabled: true
-      #  interval: 100000
-      #  num_vines: 4
-        
+      
             
       
-    max_steps: 1000000
+    max_steps: 100000000
     time_horizon: 64
     summary_freq: 10000
 

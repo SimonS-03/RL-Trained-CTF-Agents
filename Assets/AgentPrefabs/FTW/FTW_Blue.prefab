@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 10
+    VectorObservationSize: 9
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
@@ -161,11 +161,11 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 0}
+  m_Model: {fileID: 5022602860645237092, guid: 1d64a3f9b776a4056b26a4d75e013b6c, type: 3}
   m_InferenceDevice: 0
-  m_BehaviorType: 1
-  m_BehaviorName: PacAgent
-  TeamId: 1
+  m_BehaviorType: 0
+  m_BehaviorName: ftw
+  TeamId: 0
   m_UseChildSensors: 1
   m_UseChildActuators: 1
   m_DeterministicInference: 0
@@ -187,6 +187,8 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   _agent: {fileID: -4687693382850069095}
+  _enemyBufferSensor: {fileID: 8016520609525170560}
+  _friendlyBufferSensor: {fileID: 6253845095478460957}
   teamMateIndex: -1
 --- !u!114 &5653406579919043120
 MonoBehaviour:
@@ -201,7 +203,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.DecisionRequester
   DecisionPeriod: 5
-  DecisionStep: 0
+  DecisionStep: 2
   TakeActionsBetweenDecisions: 1
 --- !u!1 &5824477697522828855
 GameObject:
@@ -246,10 +248,11 @@ GameObject:
   m_Component:
   - component: {fileID: 7590239236346415432}
   - component: {fileID: 8603408738799662165}
-  - component: {fileID: 3611547141345871059}
   - component: {fileID: 226580474262016984}
+  - component: {fileID: 8016520609525170560}
+  - component: {fileID: 6253845095478460957}
   m_Layer: 7
-  m_Name: RotLockRays
+  m_Name: SensorHolder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -284,37 +287,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.RayPerceptionSensorComponent3D
   m_SensorName: ObstacleEnemySensor
   m_DetectableTags:
-  - Blue
-  - Red
   - Obstacle
-  m_RaysPerDirection: 20
-  m_MaxRayDegrees: 179
-  m_SphereCastRadius: 0.2
-  m_RayLength: 40
-  m_RayLayerMask:
-    serializedVersion: 2
-    m_Bits: 1152
-  m_ObservationStacks: 1
-  m_AlternatingRayOrder: 0
-  m_UseBatchedRaycasts: 0
-  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
-  rayMissColor: {r: 0, g: 0, b: 0, a: 1}
-  m_StartVerticalOffset: 0.2
-  m_EndVerticalOffset: 0.2
---- !u!114 &3611547141345871059
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6515008857392276025}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.RayPerceptionSensorComponent3D
-  m_SensorName: FoodSensor
-  m_DetectableTags:
   - Food
   m_RaysPerDirection: 20
   m_MaxRayDegrees: 179
@@ -322,7 +295,7 @@ MonoBehaviour:
   m_RayLength: 40
   m_RayLayerMask:
     serializedVersion: 2
-    m_Bits: 8
+    m_Bits: 1032
   m_ObservationStacks: 1
   m_AlternatingRayOrder: 0
   m_UseBatchedRaycasts: 0
@@ -342,6 +315,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 05de5f592196b414f875b506c9cb8c52, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RotationLock
+--- !u!114 &8016520609525170560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6515008857392276025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd8012d5925524537b27131fef517017, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.BufferSensorComponent
+  m_SensorName: EnemySensor
+  m_ObservableSize: 4
+  m_MaxNumObservables: 4
+--- !u!114 &6253845095478460957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6515008857392276025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd8012d5925524537b27131fef517017, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.BufferSensorComponent
+  m_SensorName: FriendlySensor
+  m_ObservableSize: 4
+  m_MaxNumObservables: 4
 --- !u!1001 &2556204085055950491
 PrefabInstance:
   m_ObjectHideFlags: 0

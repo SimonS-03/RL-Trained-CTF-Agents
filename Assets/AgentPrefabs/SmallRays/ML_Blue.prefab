@@ -241,7 +241,7 @@ MonoBehaviour:
   m_Model: {fileID: 5022602860645237092, guid: 341055473bd832c40b0a7c5f653f4ed4, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
-  m_BehaviorName: PacAgent
+  m_BehaviorName: ....
   TeamId: 1
   m_UseChildSensors: 1
   m_UseChildActuators: 1

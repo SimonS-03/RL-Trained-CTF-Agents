@@ -1,0 +1,42 @@
+{
+    "flag_capture_weight": {
+        "lesson_num": 0
+    },
+    "tagging_opponent_weight": {
+        "lesson_num": 0
+    },
+    "getting_tagged_weight": {
+        "lesson_num": 0
+    },
+    "flag_pickup_weight": {
+        "lesson_num": 0
+    },
+    "ftw": {
+        "elo": 500.0228273122875,
+        "checkpoints": [
+            {
+                "steps": 10352,
+                "file_path": "results/test0001/ftw/ftw-10352.onnx",
+                "reward": 0.004938530359140714,
+                "creation_time": 1776076861.6203232,
+                "auxillary_file_paths": [
+                    "results/test0001/ftw/ftw-10352.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 10352,
+            "file_path": "results/test0001/ftw.onnx",
+            "reward": 0.004938530359140714,
+            "creation_time": 1776076861.6203232,
+            "auxillary_file_paths": [
+                "results/test0001/ftw/ftw-10352.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.11.0"
+    }
+}
