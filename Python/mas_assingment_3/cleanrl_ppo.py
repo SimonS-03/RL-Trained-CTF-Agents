@@ -222,22 +222,8 @@ class Agent(nn.Module):
         return x[:, :self.EGO_CONTEXT_DIM]
 
     def _remove_attention_segments(self, x):
-        segments = sorted(self._attention_specs, key=lambda spec: spec.start)
-        remaining_parts = []
-        cursor = 0
-
-        for spec in segments:
-            if cursor < spec.start:
-                remaining_parts.append(x[:, cursor:spec.start])
-            cursor = spec.end
-
-        if cursor < x.shape[1]:
-            remaining_parts.append(x[:, cursor:])
-
-        if not remaining_parts:
-            return x.new_zeros((x.shape[0], 0))
-
-        return torch.cat(remaining_parts, dim=-1)
+        # The non-attention context is the fixed ego/map prefix in this layout.
+        return x[:, :self.EGO_QUERY_DIM]
 
     def _process_attention_block(self, x, spec: AttentionSpec):
         entity_raw = x[:, spec.start:spec.end].view(-1, spec.count, spec.item_dim)
@@ -251,9 +237,11 @@ class Agent(nn.Module):
         key_value = self.entity_norm(self.entity_encoders[spec.name](entity_combined))
 
         padding_mask = entity_raw.abs().sum(dim=-1) == 0
-        all_masked = padding_mask.all(dim=-1)
-        if all_masked.any():
-            padding_mask[all_masked, 0] = False
+        all_masked = padding_mask.all(dim=-1, keepdim=True)
+        padding_mask = torch.cat([
+            padding_mask[:, :1] & ~all_masked,
+            padding_mask[:, 1:],
+        ], dim=1)
 
         attn_output, _ = self.attention(
             query=query,
