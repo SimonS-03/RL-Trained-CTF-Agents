@@ -141,6 +141,7 @@ MonoBehaviour:
   discreteActions: 
   inferencePolicy: {fileID: 0}
   gymSteps: 300
+  physicsStepsPerGymStep: 2
 --- !u!1 &5824477697522828855
 GameObject:
   m_ObjectHideFlags: 0

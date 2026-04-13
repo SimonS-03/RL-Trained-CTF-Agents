@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Normal
-from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 from unity_vecenv.onnx_utilities.onnx_exporter import export_unity_onnx_simple
@@ -39,9 +38,9 @@ class Args:
     """the name of this experiment"""
     seed: int = 1
     """seed of the experiment"""
-    torch_deterministic: bool = True
+    torch_deterministic: bool = False
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
-    cuda: bool = True
+    cuda: bool = False
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
@@ -67,7 +66,7 @@ class Args:
     """the number of parallel game environments. When set to 0, will be determined by unity scene."""
     num_instances: int = 6
     """the number of parallel game environments per instance"""
-    num_steps: int = 100
+    num_steps: int = 256
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -75,9 +74,9 @@ class Args:
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 10
+    num_minibatches: int = 8
     """the number of mini-batches"""
-    update_epochs: int = 4
+    update_epochs: int = 2
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
@@ -93,8 +92,22 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = None
     """the target KL divergence threshold"""
-    hidden_size: int = 128
+    hidden_size: int = 64
     """hidden layer width for actor and critic MLPs"""
+    enemy_encoder: str = "attention"
+    """encoder for enemies: attention | deepsets"""
+    food_encoder: str = "deepsets"
+    """encoder for food: attention | deepsets"""
+    friendly_encoder: str = "deepsets"
+    """encoder for friendlies: attention | deepsets"""
+    enemy_embed_dim: int = 64
+    """embedding size for enemy entities"""
+    food_embed_dim: int = 16
+    """embedding size for food entities"""
+    friendly_embed_dim: int = 32
+    """embedding size for friendly entities"""
+    attention_heads: int = 2
+    """maximum number of heads used by attention encoders"""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -113,12 +126,12 @@ def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.
 class ModuleWrapper(nn.Module):
     def __init__(self, agent_ref, actor_mlp):
         super().__init__()
-        # We store a reference to the agent's attention logic
+        # Store a reference to the agent's entity processing logic.
         self.mlp = actor_mlp
-        self._agent_ref_container = [agent_ref] # Using an underscore avoids infinite recursion when pytorch looks into submodules apprently
+        self._agent_ref_container = [agent_ref]
 
     def forward(self, x):
-        # This is what will be recorded in the ONNX file
+        # This is what will be recorded in the ONNX file.
         processed_x = self._agent_ref_container[0]._process_attention(x)
         return self.mlp(processed_x)
 
@@ -156,7 +169,7 @@ class Agent(nn.Module):
     FRIENDLY_START = FOOD_END
     FRIENDLY_END = FRIENDLY_START + K_NEAREST_FRIENDLY * DIMS_PER_FRIENDLY
 
-    def __init__(self, envs: Any, hidden_size: int):
+    def __init__(self, envs: Any, args: Args):
         super().__init__()
 
         self.raw_obs_dims = envs.single_observation_space.shape
@@ -167,41 +180,62 @@ class Agent(nn.Module):
         )
         self.enemy_spec, self.food_spec, self.friendly_spec = self._attention_specs
 
-        enemy_embed_dim = 64
+        self.encoder_modes = {
+            "enemies": args.enemy_encoder.lower(),
+            "food": args.food_encoder.lower(),
+            "friendlies": args.friendly_encoder.lower(),
+        }
+        valid_modes = {"attention", "deepsets"}
+        for name, mode in self.encoder_modes.items():
+            if mode not in valid_modes:
+                raise ValueError(f"Unsupported encoder mode '{mode}' for {name}. Expected one of {sorted(valid_modes)}")
 
-        # Query encoder for the agent's own state.
-        self.ego_encoder = nn.Sequential(
-            layer_init(nn.Linear(self.EGO_QUERY_DIM, enemy_embed_dim)),
-            nn.ReLU(),
-        )
-        self.query_norm = nn.LayerNorm(enemy_embed_dim)
-        self.entity_norm = nn.LayerNorm(enemy_embed_dim)
+        self.embed_dims = {
+            "enemies": args.enemy_embed_dim,
+            "food": args.food_embed_dim,
+            "friendlies": args.friendly_embed_dim,
+        }
 
-        # Entity encoders are separate because food, enemies, and allies can use different raw feature sizes.
+        # Entity encoders are separate because food, enemies, and allies use different raw features.
         self.entity_encoders = nn.ModuleDict({
-            spec.name: self._build_entity_encoder(spec.item_dim, enemy_embed_dim)
+            spec.name: self._build_entity_encoder(spec.item_dim, self.embed_dims[spec.name])
             for spec in self._attention_specs
         })
 
-        # Attention layer
-        self.attention = nn.MultiheadAttention(embed_dim=enemy_embed_dim, num_heads=2, batch_first=True)
+        self.ego_query_encoders = nn.ModuleDict()
+        self.query_norms = nn.ModuleDict()
+        self.entity_norms = nn.ModuleDict()
+        self.attentions = nn.ModuleDict()
+        for spec in self._attention_specs:
+            if self.encoder_modes[spec.name] != "attention":
+                continue
 
-        total_attention_raw_dim = sum(spec.raw_dim for spec in self._attention_specs)
-        remaining_obs_dim = int(np.prod(envs.single_observation_space.shape)) - total_attention_raw_dim
-        input_dim = remaining_obs_dim + enemy_embed_dim * len(self._attention_specs)
+            embed_dim = self.embed_dims[spec.name]
+            num_heads = self._resolve_attention_heads(embed_dim, args.attention_heads)
+            self.ego_query_encoders[spec.name] = nn.Sequential(
+                layer_init(nn.Linear(self.EGO_QUERY_DIM, embed_dim)),
+                nn.ReLU(),
+            )
+            self.query_norms[spec.name] = nn.LayerNorm(embed_dim)
+            self.entity_norms[spec.name] = nn.LayerNorm(embed_dim)
+            self.attentions[spec.name] = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads, batch_first=True)
+
+        remaining_obs_dim = self.EGO_QUERY_DIM
+        encoded_summary_dim = sum(self.embed_dims[spec.name] for spec in self._attention_specs)
+        input_dim = remaining_obs_dim + encoded_summary_dim
         self.internal_critic_mlp = nn.Sequential(
-            layer_init(nn.Linear(input_dim, hidden_size)),
+            layer_init(nn.Linear(input_dim, args.hidden_size)),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, hidden_size)),
+            layer_init(nn.Linear(args.hidden_size, args.hidden_size)),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, 1), std=1.0),
+            layer_init(nn.Linear(args.hidden_size, 1), std=1.0),
         )
         self.internal_actor_mlp = nn.Sequential(
-            layer_init(nn.Linear(input_dim, hidden_size)),
+            layer_init(nn.Linear(input_dim, args.hidden_size)),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, hidden_size)),
+            layer_init(nn.Linear(args.hidden_size, args.hidden_size)),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, np.prod(envs.single_action_space.shape)), std=0.01),
+            layer_init(nn.Linear(args.hidden_size, np.prod(envs.single_action_space.shape)), std=0.01),
         )
 
         # ONNX export searches for this specific function so all the logic is wrapped inside it.
@@ -209,6 +243,16 @@ class Agent(nn.Module):
         self.critic = ModuleWrapper(self, self.internal_critic_mlp)
 
         self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
+
+    @staticmethod
+    def _resolve_attention_heads(embed_dim: int, requested_heads: int) -> int:
+        if requested_heads <= 1:
+            return 1
+
+        for heads in range(min(requested_heads, embed_dim), 0, -1):
+            if embed_dim % heads == 0:
+                return heads
+        return 1
 
     def _build_entity_encoder(self, raw_feature_dim: int, embed_dim: int) -> nn.Sequential:
         return nn.Sequential(
@@ -227,23 +271,30 @@ class Agent(nn.Module):
 
     def _process_attention_block(self, x, spec: AttentionSpec):
         entity_raw = x[:, spec.start:spec.end].view(-1, spec.count, spec.item_dim)
-        ego_raw = x[:, :self.EGO_QUERY_DIM]
         ego_ctx = self._extract_entity_context(x)
 
         ego_repeated = ego_ctx.unsqueeze(1).expand(-1, spec.count, -1)
         entity_combined = torch.cat([entity_raw, ego_repeated], dim=-1)
-
-        query = self.query_norm(self.ego_encoder(ego_raw)).unsqueeze(1)
-        key_value = self.entity_norm(self.entity_encoders[spec.name](entity_combined))
-
+        encoded_entities = self.entity_encoders[spec.name](entity_combined)
         padding_mask = entity_raw.abs().sum(dim=-1) == 0
+
+        if self.encoder_modes[spec.name] == "deepsets":
+            valid_mask = (~padding_mask).unsqueeze(-1).float()
+            summed = (encoded_entities * valid_mask).sum(dim=1)
+            counts = valid_mask.sum(dim=1).clamp(min=1.0)
+            return summed / counts
+
+        ego_raw = x[:, :self.EGO_QUERY_DIM]
+        query = self.query_norms[spec.name](self.ego_query_encoders[spec.name](ego_raw)).unsqueeze(1)
+        key_value = self.entity_norms[spec.name](encoded_entities)
+
         all_masked = padding_mask.all(dim=-1, keepdim=True)
         padding_mask = torch.cat([
             padding_mask[:, :1] & ~all_masked,
             padding_mask[:, 1:],
         ], dim=1)
 
-        attn_output, _ = self.attention(
+        attn_output, _ = self.attentions[spec.name](
             query=query,
             key=key_value,
             value=key_value,
@@ -311,7 +362,7 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
 
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent(envs, args.hidden_size).to(device)
+    agent = Agent(envs, args).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -326,7 +377,7 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
     global_step = 0
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
-    next_obs = torch.Tensor(next_obs).to(device)
+    next_obs = torch.as_tensor(next_obs, dtype=torch.float32, device=device)
     next_done = torch.zeros(args.num_envs).to(device)
 
     STOP_FILE = "stop_training"
@@ -359,10 +410,16 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+            if device.type == "cuda":
+                action_np = action.cpu().numpy()
+            else:
+                action_np = action.numpy()
+
+            next_obs, reward, terminations, truncations, infos = envs.step(action_np)
             next_done = np.logical_or(terminations, truncations)
-            rewards[step] = torch.tensor(reward).to(device).view(-1)
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+            rewards[step] = torch.as_tensor(reward, dtype=torch.float32, device=device).view(-1)
+            next_obs = torch.as_tensor(next_obs, dtype=torch.float32, device=device)
+            next_done = torch.as_tensor(next_done, dtype=torch.float32, device=device)
 
             if "episode" in infos:
                 episode_mask = infos.get("_episode")
@@ -468,7 +525,8 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)), ", Avg Ep Return:", round(sum_episode_return / episode_count, 4), ", Global Step:", global_step, round(global_step/args.total_timesteps * 100),"%, Remaining:", round((args.total_timesteps - global_step) / global_step * (time.time() - start_time) / 60), "min")
+        avg_ep_return = (sum_episode_return / episode_count) if episode_count > 0 else float("nan")
+        print("SPS:", int(global_step / (time.time() - start_time)), ", Avg Ep Return:", round(avg_ep_return, 4), ", Global Step:", global_step, round(global_step/args.total_timesteps * 100),"%, Remaining:", round((args.total_timesteps - global_step) / global_step * (time.time() - start_time) / 60), "min")
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     export_unity_onnx_simple(

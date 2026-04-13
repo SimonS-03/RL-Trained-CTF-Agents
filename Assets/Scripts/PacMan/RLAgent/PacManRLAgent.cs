@@ -13,6 +13,9 @@ namespace PacMan.RLAgent
 {
     public class PacManRLAgent : GymAgent
     {
+        [SerializeField]
+        private int physicsStepsPerGymStep = 10;
+
         private PacManAgentManager _agent;
         private PacManMovementController _controller;
         private Vector2 _currentAction = Vector2.zero;
@@ -37,6 +40,7 @@ namespace PacMan.RLAgent
         private const int TotalObsDim = FriendlyStart + friendlyObservations * FriendlyObsDim;
         private float _currentFoodCount;
         private float _currentFlowCost;
+        private float _currentTeamScoreDifference;
         private float _reward;
         private bool _lostFoodSinceLastReward;
         private Dictionary<string, float> _rewardWeights;
@@ -54,7 +58,7 @@ namespace PacMan.RLAgent
 
         private void Awake()
         {
-            GymVecEnvManager.Instance.physicsStepsPerGymStep = 5;
+            GymVecEnvManager.Instance.physicsStepsPerGymStep = Mathf.Max(1, physicsStepsPerGymStep);
             _agent = GetComponent<PacManAgentManager>();
         }
 
@@ -85,6 +89,7 @@ namespace PacMan.RLAgent
             _rewardWeights.Add("eatenByEnemy", -3f); // for 1 enemy
             _rewardWeights.Add("living", -0.01f); // Each step
             _rewardWeights.Add("touchingWall", -0.01f); // Each step touching a wall
+            _rewardWeights.Add("noMove", -0.03f); // Each step with low movement to encourage moving
         }
 
         protected void ResetState()
@@ -94,6 +99,7 @@ namespace PacMan.RLAgent
             _currentFlowCost = 0;
             _reward = 0f;
             _lostFoodSinceLastReward = false;
+            _currentTeamScoreDifference = _agent.GetScore();
         }
 
         protected override void CollectInfo(Dictionary<string, float> metadata)
@@ -305,15 +311,24 @@ namespace PacMan.RLAgent
             _currentFoodCount = _agent.GetCarriedFoodCount();
 
             // flow cost dense reward
-            var newFlowCost = _coordinator.GetFlowCost(_agent.transform.position);
-            if(newFlowCost >= float.MaxValue)
-                newFlowCost = _currentFlowCost;
-            if(newFlowCost < _currentFlowCost) // Closer to food
-                _reward += (_currentFlowCost - newFlowCost) * _rewardWeights["flowCost"];
-            _currentFlowCost = newFlowCost;
+            // var newFlowCost = _coordinator.GetFlowCost(_agent.transform.position);
+            // if(newFlowCost >= float.MaxValue)
+            //     newFlowCost = _currentFlowCost;
+            // if(newFlowCost < _currentFlowCost) // Closer to food
+            //     _reward += (_currentFlowCost - newFlowCost) * _rewardWeights["flowCost"];
+            // _currentFlowCost = newFlowCost;
             
             //Living reward
             _reward += _rewardWeights["living"];
+
+            // Team score difference reward (for now just score)
+            var teamScoreDifference = _agent.GetScore() - _currentTeamScoreDifference;
+            _reward += teamScoreDifference * 0.005f; // Scale down the score difference reward
+            _currentTeamScoreDifference = _agent.GetScore();
+            
+            // Stationary penalty
+            if (_currentAction.magnitude < 0.1f)
+                _reward += _rewardWeights["noMove"]; // Reuse wall penalty for standing still to encourage
 
             float returnReward = _reward;
             _reward = 0f;

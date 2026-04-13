@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5474480618532514740}
   - component: {fileID: 3149861640129074734}
   - component: {fileID: 491200527833410679}
-  - component: {fileID: 8987127427400837028}
+  - component: {fileID: -5752253968278841535}
   m_Layer: 7
   m_Name: PacManAgentPlaybackRL
   m_TagString: Red
@@ -123,7 +123,7 @@ MonoBehaviour:
   action:
     Acceleration: {x: 0, y: 0}
     Index: 0
---- !u!114 &8987127427400837028
+--- !u!114 &-5752253968278841535
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -132,10 +132,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 3737944645222697628}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 168ede67cc11438a962d4689826b8bc9, type: 3}
+  m_Script: {fileID: 11500000, guid: 37faf626dcb344a61a8de4c5e8d1112c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLExample.PacManAIRL
-  modelAsset: {fileID: 5022602860645237092, guid: 3b37354fb2055e64a9f164b8619dba25,
+  m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLExample.PacManRLInference
+  modelAsset: {fileID: 5022602860645237092, guid: 885530271b92e487d8b6e66b0d0ce7df,
     type: 3}
 --- !u!1 &5824477697522828855
 GameObject:

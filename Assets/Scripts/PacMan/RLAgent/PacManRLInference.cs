@@ -24,27 +24,42 @@ namespace PacMan.RLExample
             helper = new InferenceHelper(modelAsset);
 
             // Mirror PacManRLAgent team-based coordinator lookup so observations use shared team context.
-            coordinator = transform.parent
-                .GetComponentsInChildren<AgentCoordinator>()
-                .ToList()
-                .Find(c => c.isBlueTeam == (TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue));
+            var isBlueTeam = TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue;
+            coordinator = transform.parent != null
+                ? transform.parent
+                    .GetComponentsInChildren<AgentCoordinator>()
+                    .ToList()
+                    .Find(c => c.isBlueTeam == isBlueTeam)
+                : GetComponentsInParent<AgentCoordinator>()
+                    .ToList()
+                    .Find(c => c.isBlueTeam == isBlueTeam);
+
+            if (coordinator == null)
+            {
+                Debug.LogError("PacManRLInference could not find AgentCoordinator for this team.");
+            }
         }
 
         public override PacManAction Tick()
         {
-            var visibleEnemies = _agent.GetVisibleEnemyAgents();
-            if (visibleEnemies.Count > 0)
+            if (helper != null && coordinator != null)
             {
-                var firstVisible = visibleEnemies[0];
+                var action = helper.DoInference(
+                    PacManRLAgent.CollectObservation(new AgentObservation(RlObservationContinuousSize, 0), _agent, coordinator)
+                );
 
-                if (!firstVisible.isGhost && _agent.isGhost && coordinator != null)
+                if (action.Continuous != null && action.Continuous.Length >= 2)
                 {
-                    var action = helper.DoInference(PacManRLAgent.CollectObservation(new AgentObservation(RlObservationContinuousSize, 0), _agent, coordinator));
                     return new PacManAction
                     {
-                        Acceleration = new Vector2(action.Continuous[0], action.Continuous[1]),
+                        Acceleration = new Vector2(
+                            Mathf.Clamp(action.Continuous[0], -1f, 1f),
+                            Mathf.Clamp(action.Continuous[1], -1f, 1f)
+                        ),
                     };
                 }
+
+                Debug.LogWarning("PacManRLInference model output was missing continuous actions; falling back to manual input.");
             }
 
 
