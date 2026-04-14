@@ -27,7 +27,7 @@ public class TeamManager : MonoBehaviour
             FtwAgent ftwAgent = agent.GetComponent<FtwAgent>();
             if (agent.gameObject.CompareTag("Red"))
             {
-                ftwAgent.teamMateIndex = redIndex;
+                ftwAgent.teamMateIndex = redIndex % 2;
                 redIndex++;
                 redTeam.RegisterAgent(agent);
                 registeredReds.Add(agent);
@@ -35,7 +35,7 @@ public class TeamManager : MonoBehaviour
 
             if (agent.gameObject.CompareTag("Blue"))
             {
-                ftwAgent.teamMateIndex = blueIndex;
+                ftwAgent.teamMateIndex = blueIndex % 2;
                 blueIndex++;
                 blueTeam.RegisterAgent(agent);
                 registeredBlues.Add(agent);
@@ -66,14 +66,14 @@ public class TeamManager : MonoBehaviour
     {
         if (blueWin)
         {
-            blueTeam.SetGroupReward(2f);
-            redTeam.SetGroupReward(-2f);
+            blueTeam.SetGroupReward(1f);
+            redTeam.SetGroupReward(-1f);
             Debug.Log("Game ended in favour of blue team");
         }
         else
         {
-            blueTeam.SetGroupReward(-2f);
-            redTeam.SetGroupReward(2f);
+            blueTeam.SetGroupReward(-1f);
+            redTeam.SetGroupReward(1f);
             Debug.Log("Game ended in favour of red team");
         }
         

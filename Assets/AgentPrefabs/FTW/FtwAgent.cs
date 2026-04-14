@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using Imported.StandardAssets.CrossPlatformInput.Scripts;
 using PacMan.Game;
 using PacMan.Local;
+using PacMan.RLAgent;
 using Scripts.Map;
 using UnityEngine;
 using Unity.MLAgents;
@@ -13,28 +14,42 @@ using Unity.MLAgents.Actuators;
 
 public class FtwAgent: Unity.MLAgents.Agent
 {
-    private const int MaxEntitiesPerBuffer = 4;
-    private const int EntityObservationSize = 4;
+    private const int EntityObservationSize = 4; // size of an agent observation
+    private const int MaxFoodPerBuffer = 8;
+    private const int FoodObservationSize = 4;
 
     private PacManMovementController controller;
     [SerializeField] private PacManAgentManager _agent;
     
     [SerializeField] private BufferSensorComponent _enemyBufferSensor;
     [SerializeField] private BufferSensorComponent _friendlyBufferSensor;
+    [SerializeField] private BufferSensorComponent _foodBufferSensor;
     
     private int lastFoodCaried = 0;
     float distToBorder = 0f;
-    public int team => gameObject.CompareTag("Blue")? 1 : -1;
+    public int team
+    {
+        get
+        {
+            if (gameObject.CompareTag("Blue")) return 1;
+            if (gameObject.CompareTag("Red")) return -1;
+
+            Debug.LogError($"Unexpected tag '{gameObject.tag}' on {gameObject.name}. Expected Blue or Red.");
+            return -1; // or throw/disable agent in dev builds
+        }
+    }
+
     private float clostestFood = 10f, lastClosestFood = 10f;
     private Vector3 prevPos;
     private int prevScore = 0;
     public int teamMateIndex = -1;
-    
+    private AgentCoordinator flowCoordinator;
     
     private float _wCapture = 1f, _wPickup = 1f, _wTaggingOpponent = 1f, _wGettingTagged = 1f;
     
     public override void Initialize()
     {
+        flowCoordinator = AgentCoordinator.Instance;
         controller = GetComponent<PacManMovementController>();
         if (_agent == null)
         {
@@ -63,9 +78,9 @@ public class FtwAgent: Unity.MLAgents.Agent
         };
     }
 
-    private int AppendFixedSizeEntityBuffer(BufferSensorComponent sensor, List<PacManAgentManager> entities)
+    private int AppendFixedSizeEntityBuffer(BufferSensorComponent sensor, List<PacManAgentManager> entities, int fixedNbrEntities)
     {
-        int realCount = Mathf.Min(entities.Count, MaxEntitiesPerBuffer);
+        int realCount = Mathf.Min(entities.Count, fixedNbrEntities);
 
         for (int i = 0; i < realCount; i++)
         {
@@ -73,9 +88,50 @@ public class FtwAgent: Unity.MLAgents.Agent
         }
 
         // Always write exactly MaxEntitiesPerBuffer entries.
-        for (int i = realCount; i < MaxEntitiesPerBuffer; i++)
+        for (int i = realCount; i < fixedNbrEntities; i++)
         {
             sensor.AppendObservation(new float[EntityObservationSize]);
+        }
+
+        return realCount;
+    }
+
+    private float[] BuildFoodObservation(Vector3 foodPosition)
+    {
+        Vector3 diffPos = foodPosition - _agent.transform.position;
+        float distance = Mathf.Sqrt(diffPos.x * diffPos.x + diffPos.z * diffPos.z);
+        return new[]
+        {
+            Mathf.Clamp(diffPos.x * team / 12f, -1f, 1f),
+            Mathf.Clamp(diffPos.z * team / 12f, -1f, 1f),
+            Mathf.Clamp01(distance / 12f),
+            1f // Food exists
+        };
+    }
+
+    private int AppendFixedSizeFoodBuffer(BufferSensorComponent sensor, List<Vector3> foodPositions, int fixedNbrFoods)
+    {
+        if (sensor == null || foodPositions == null || _agent == null)
+            return 0;
+
+        int realCount = Mathf.Min(foodPositions.Count, fixedNbrFoods);
+
+        // Keep the closest food targets to stabilize the fixed-size deep set input.
+        foodPositions.Sort((a, b) =>
+        {
+            float da = (a - _agent.transform.position).sqrMagnitude;
+            float db = (b - _agent.transform.position).sqrMagnitude;
+            return da.CompareTo(db);
+        });
+
+        for (int i = 0; i < realCount; i++)
+        {
+            sensor.AppendObservation(BuildFoodObservation(foodPositions[i]));
+        }
+
+        for (int i = realCount; i < fixedNbrFoods; i++)
+        {
+            sensor.AppendObservation(new float[FoodObservationSize]);
         }
 
         return realCount;
@@ -83,54 +139,64 @@ public class FtwAgent: Unity.MLAgents.Agent
     
     public override void CollectObservations(VectorSensor sensor)
     {
-        distToBorder = borderDistance(transform.position.x);
-        int hunterInt = _agent.isGhost? 1 : -1;
-        
-        // Our inputs are: team/side, distance to border (x = 0.3f), and whether or not we are hunted or hunter. As well as direction we are looking.
-        
-        sensor.AddObservation(hunterInt);
-        sensor.AddObservation(Mathf.Clamp(distToBorder/12f, -1f, 1f));
-        //sensor.AddObservation(teamMateIndex);
         if (_agent != null)
         {
+            distToBorder = borderDistance(transform.position.x);
+            int hunterInt = _agent.isGhost? 1 : -1;
+            sensor.AddObservation(teamMateIndex);
+            sensor.AddObservation(hunterInt);
+            sensor.AddObservation(distToBorder);
             sensor.AddObservation(Mathf.Clamp01(_agent.foodCarried.Count/3f));
             sensor.AddObservation(Mathf.Clamp(_agent.GetScore()/10f, -1f, 1f));
             sensor.AddObservation(Mathf.Clamp01(_agent.GetTimeRemaining()/150f));
         }
         else
         {
-            sensor.AddObservation(1f);
-            sensor.AddObservation(1f);
-            sensor.AddObservation(1f);
+            sensor.AddObservation(new float[6]);
             Debug.Log("Agent is null");
         }
+        //Debug.Log(flowCoordinator.GetBorderFlowDirection(transform.position) * team);
+        Vector3 borderFlowDirection = flowCoordinator.GetBorderFlowDirection(transform.position) * team;
+        //Vector3 foodFlowDirection = flowCoordinator.GetFoodFlowDirection(transform.position, team == 1) * team;
+        
+        sensor.AddObservation(new Vector2(borderFlowDirection.x, borderFlowDirection.z));
+        //sensor.AddObservation(Mathf.Clamp01(flowCoordinator.GetBorderFlowCost(transform.position)/12f));
+        
+        //sensor.AddObservation(new Vector2(foodFlowDirection.x, foodFlowDirection.z));
+        //sensor.AddObservation(Mathf.Clamp01(flowCoordinator.GetFoodFlowCost(transform.position, team == 1)/12f));
+        
         
         // Reward parameters, the agent needs to know to play smartly!
-        sensor.AddObservation(_wCapture);
-        sensor.AddObservation(_wPickup);
-        sensor.AddObservation(_wTaggingOpponent);
-        sensor.AddObservation(_wGettingTagged);
+        //sensor.AddObservation(_wCapture);
+        //sensor.AddObservation(_wPickup);
+        //sensor.AddObservation(_wTaggingOpponent);
+        //sensor.AddObservation(_wGettingTagged);
 
+        
+        
+        
         
         // Deep sets for detecting relative enemy and friendly positions!
         List<PacManAgentManager> visibleEnemies =  new List<PacManAgentManager>();
         List<PacManAgentManager> friendlies =  new List<PacManAgentManager>();
-        List<Vector3> foodPositions = new List<Vector3>();
+        List<Vector3> targetFoodPositions = new List<Vector3>();
         try
         {
             visibleEnemies = _agent.GetVisibleEnemyAgents();
             friendlies = _agent.GetFriendlyAgents();
+            targetFoodPositions = team == 1
+                ? new List<Vector3>(flowCoordinator.targetFoodBlue)
+                : new List<Vector3>(flowCoordinator.targetFoodRed);
         }
         catch (Exception e)
         {
             Debug.LogWarning(e);
         }
 
-        int enemyBufferSize = AppendFixedSizeEntityBuffer(_enemyBufferSensor, visibleEnemies);
-        int friendlyBufferSize = AppendFixedSizeEntityBuffer(_friendlyBufferSensor, friendlies);
-        
-        
-        Debug.Log($"nbr friendlies visible:  {friendlyBufferSize}. Enemies: {enemyBufferSize}");
+        int enemyBufferSize = AppendFixedSizeEntityBuffer(_enemyBufferSensor, visibleEnemies, 4);
+        int friendlyBufferSize = AppendFixedSizeEntityBuffer(_friendlyBufferSensor, friendlies, 3);
+        int foodBufferSize = AppendFixedSizeFoodBuffer(_foodBufferSensor, targetFoodPositions, MaxFoodPerBuffer);
+        //Debug.Log($"nbr friendlies visible:  {friendlyBufferSize}. Enemies: {enemyBufferSize}. Food: {foodBufferSize}");
     }
 
     public void signalFoodDelivery(int nbr)
@@ -158,6 +224,12 @@ public class FtwAgent: Unity.MLAgents.Agent
     {
         //AddReward(-.005f);
     }
+    
+    private Vector3 previousIdlePos =  Vector3.zero;
+    private float idleTime = 0f;
+    [SerializeField] private float idleStepPenalty = 0.025f;
+    [SerializeField] private float idleGraceSeconds = 1f;
+    [SerializeField] private float idleDistThreshold = 0.1f;
     public override void OnActionReceived(ActionBuffers actions)
     {
         float horizontal = actions.ContinuousActions[0];
@@ -220,7 +292,7 @@ public class FtwAgent: Unity.MLAgents.Agent
             float distToEnemy = Vector3.Distance(transform.position, enemy.transform.position);
             float prevDistToEnemy = Vector3.Distance(prevPos, enemy.transform.position);
             float distanceDiff = prevDistToEnemy - distToEnemy;
-            if (distToEnemy < 4f && Mathf.Abs(distanceDiff) > .0001f)
+            if (distToEnemy < 7.5f && Mathf.Abs(distanceDiff) > .0001f)
             {
                 AddReward(0.005f * distanceDiff * _wTaggingOpponent);
                 //Debug.Log($"Reward for being close to enemy as ghost, Reward sum: {GetCumulativeReward()}, increment: {0.1f * (0.5f - distToEnemy)}");
@@ -234,29 +306,49 @@ public class FtwAgent: Unity.MLAgents.Agent
             float distToEnemy = Vector3.Distance(transform.position, enemy.transform.position);
             float prevDistToEnemy = Vector3.Distance(prevPos, enemy.transform.position);
             float distanceDiff = distToEnemy - prevDistToEnemy;
-            if (distToEnemy < 3.5f && Mathf.Abs(distanceDiff) > .0001f)
+            if (distToEnemy < 5f && Mathf.Abs(distanceDiff) > .0001f)
             {
                 AddReward(0.005f * distanceDiff * _wGettingTagged);
             }
         }
+        
+        // Penalizes being stuck;
+        float moved = Vector3.Distance(transform.position, previousIdlePos);
+        
+        if (moved < idleDistThreshold)
+        {
+            idleTime += Time.fixedDeltaTime;
 
+            if (idleTime > idleGraceSeconds)
+            {
+                AddReward(-idleStepPenalty * Time.fixedDeltaTime);
+            }
+        }
+        else
+        {
+            previousIdlePos = transform.position;
+            idleTime = 0f;
+        }
+        
         prevPos =  transform.position;
     }
     
     public override void OnEpisodeBegin()
     {
-        var p = Academy.Instance.EnvironmentParameters;
-        _wCapture = p.GetWithDefault("flag_capture_weight", 1.0f);
-        _wPickup = p.GetWithDefault("flag_pickup_weight", 1.0f);
-        _wTaggingOpponent = p.GetWithDefault("tagging_opponent_weight", 1.0f);
-        _wGettingTagged = p.GetWithDefault("getting_tagged_weight", 1.0f);
+        //var p = Academy.Instance.EnvironmentParameters;
+        _wCapture = 1f; //p.GetWithDefault("flag_capture_weight", 1.0f);
+        _wPickup = 1f; //p.GetWithDefault("flag_pickup_weight", 1.0f);
+        _wTaggingOpponent = 1f; //p.GetWithDefault("tagging_opponent_weight", 1.0f);
+        _wGettingTagged = 1f; //p.GetWithDefault("getting_tagged_weight", 1.0f);
         //Debug.Log($"New episode begun for {gameObject.name} (index {teamMateIndex}) " +
         //          $"with weights: capture {_wCapture}, pickup {_wPickup}, " +
         //          $"tagging opponent {_wTaggingOpponent}, getting tagged {_wGettingTagged}");
         clostestFood = float.MaxValue;
         lastClosestFood = float.MaxValue; 
         lastFoodCaried = 0;
-        prevPos = transform.position; 
+        prevPos = transform.position;
+        idleTime = 0f;
+        previousIdlePos = transform.position;
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)

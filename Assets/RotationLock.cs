@@ -2,18 +2,18 @@ using UnityEngine;
 
 public class RotationLock : MonoBehaviour
 {
-    MLPacAgent _ml_agent;
+    FtwAgent _ml_agent;
 
     private void Start()
     {
-        _ml_agent = GetComponentInParent<MLPacAgent>();
+        _ml_agent = GetComponentInParent<FtwAgent>();
     }
 
     void LateUpdate()
     {
         if (_ml_agent == null)
         {
-            _ml_agent = GetComponentInParent<MLPacAgent>();
+            _ml_agent = GetComponentInParent<FtwAgent>();
             return;
         }
         //Debug.Log($"Team is {_ml_agent.team}");

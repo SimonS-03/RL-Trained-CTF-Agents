@@ -14,7 +14,7 @@ behaviors:
     network_settings:
       normalize: true
       hidden_units: 512
-      num_layers: 2
+      num_layers: 3
       memory:
         memory_size: 128
         sequence_length: 64
@@ -23,36 +23,37 @@ behaviors:
         gamma: 0.99
         strength: 1.0
     self_play:
-      save_steps: 20000
+      save_steps: 80000
       team_change: 100000
-      swap_steps: 10000
+      swap_steps: 40000
       window: 10
       play_against_latest_model_ratio: 0.5
       initial_elo: 500
       
             
+      
     max_steps: 100000000
     time_horizon: 64
     summary_freq: 10000
 
-environment_parameters:
-  flag_capture_weight:
-    sampler_type: uniform
-    sampler_parameters:
-      min_value: 1
-      max_value: 1
-  tagging_opponent_weight:
-    sampler_type: uniform
-    sampler_parameters:
-      min_value: 1
-      max_value: 1
-  getting_tagged_weight:
-    sampler_type: uniform
-    sampler_parameters:
-      min_value: 1
-      max_value: 1
-  flag_pickup_weight:
-    sampler_type: uniform
-    sampler_parameters:
-      min_value: 1
-      max_value: 1
+#environment_parameters:
+#  flag_capture_weight:
+#    sampler_type: uniform
+#    sampler_parameters:
+#      min_value: 1.0
+#      max_value: 1.0
+#  tagging_opponent_weight:
+#    sampler_type: uniform
+#    sampler_parameters:
+#      min_value: 1.0
+#      max_value: 1.0
+#  getting_tagged_weight:
+#    sampler_type: uniform
+#    sampler_parameters:
+#      min_value: 1.0
+#      max_value: 1.0
+#  flag_pickup_weight:
+#    sampler_type: uniform
+#    sampler_parameters:
+#      min_value: 1.0
+#      max_value: 1.0

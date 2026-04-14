@@ -275,6 +275,12 @@ namespace PacMan.Local
         public virtual void OnCollisionStay(Collision other)
         {
             var otherAgent = other.gameObject.GetComponent<PacManAgentManager>();
+            
+            if (otherAgent != null && !other.gameObject.CompareTag(gameObject.tag) && isGhost)
+            {
+                _mlPacAgent.signalKill(otherAgent.foodCarried.Count);
+            }
+            
             if (otherAgent != null && other.gameObject.tag != tag && !otherAgent.isScared && (!IsGhost() && otherAgent.IsGhost() ||
                                                                                               IsGhost() && otherAgent.IsGhost() ||
                                                                                               !IsGhost() && !otherAgent.IsGhost()))
@@ -284,7 +290,7 @@ namespace PacMan.Local
                 PacManGameManager.RespawnAgentAtStart(this);
             }
 
-            if (otherAgent != null && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
+            else if (otherAgent != null && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
             {
                 _mlPacAgent.signalDeath();
                 transform.position = globalStartPosition;
@@ -295,11 +301,7 @@ namespace PacMan.Local
             {
                 _mlPacAgent.signalHitWall();
             }
-
-            if (otherAgent != null && !other.gameObject.CompareTag(gameObject.tag) && !otherAgent.isGhost && isGhost)
-            {
-                _mlPacAgent.signalKill(otherAgent.foodCarried.Count);
-            }
+            
         }
 
 
