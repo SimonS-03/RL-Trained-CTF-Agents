@@ -2094,7 +2094,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebfbfa0c286248848af00f0f54b20e56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.Game.PacManManagerModeSelector
-  mode: 2
+  mode: 0
   playback_manager: {fileID: 1238940903}
   game_manager: {fileID: 892656390}
 --- !u!4 &40357987
@@ -44612,13 +44612,13 @@ PrefabInstance:
         type: 3}
       propertyPath: redAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: 58457ba1f42ad63d7b46443e6f3af6dc,
+      objectReference: {fileID: 3737944645222697628, guid: 3f81cd9b72b504e62bbc3b1ea7ed056a,
         type: 3}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: blueAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: 58457ba1f42ad63d7b46443e6f3af6dc,
+      objectReference: {fileID: 3737944645222697628, guid: 3f81cd9b72b504e62bbc3b1ea7ed056a,
         type: 3}
     - target: {fileID: 4594948241594532799, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -46166,7 +46166,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: MKA.GymVecEnv::Scripts.VecEnv.Core.Scripts.VecEnv.Core.GymEnvironmentTemplate
   cloneRoot: {fileID: 892656392}
-  descriptionAgent: {fileID: 2054312325186796880, guid: 58457ba1f42ad63d7b46443e6f3af6dc,
+  descriptionAgent: {fileID: -5818020174146274149, guid: 3f81cd9b72b504e62bbc3b1ea7ed056a,
     type: 3}
   cloneOffset: {x: -50, y: 0, z: 0}
   defaultEnvCount: 1

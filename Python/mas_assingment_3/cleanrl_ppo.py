@@ -108,6 +108,14 @@ class Args:
     """embedding size for friendly entities"""
     attention_heads: int = 2
     """maximum number of heads used by attention encoders"""
+    checkpoint_interval: int = 100
+    """save a training checkpoint every N PPO iterations; set to 0 to disable"""
+    checkpoint_dirname: str = "checkpoints"
+    """subdirectory inside the run directory used for checkpoint files"""
+    resume_checkpoint: str = ""
+    """path to a .pt checkpoint file to resume training from"""
+    auto_resume_latest: bool = False
+    """if toggled, resume from the latest checkpoint in runs/*/checkpoints"""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -122,6 +130,85 @@ def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
+
+
+def save_training_checkpoint(
+    agent: nn.Module,
+    optimizer: optim.Optimizer,
+    iteration: int,
+    global_step: int,
+    run_dir: str,
+    args: Args,
+    tag: str,
+    obs_shape: tuple[int, ...] | None = None,
+) -> str:
+    checkpoint_dir = os.path.join(run_dir, args.checkpoint_dirname)
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_path = os.path.join(checkpoint_dir, f"{tag}_{iteration:06d}_step_{global_step:09d}.pt")
+    torch.save(
+        {
+            "iteration": iteration,
+            "global_step": global_step,
+            "model_state_dict": agent.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "args": vars(args),
+            "tag": tag,
+        },
+        checkpoint_path,
+    )
+
+    # Save an ONNX sidecar with the same base name for easier deployment from checkpoints.
+    if obs_shape is not None:
+        onnx_path = os.path.splitext(checkpoint_path)[0] + ".onnx"
+        try:
+            export_unity_onnx_simple(
+                agent=agent,
+                obs_shape=obs_shape,
+                out_path=onnx_path,
+                opset=13,
+            )
+        except Exception as exc:
+            print(f"Warning: failed to export ONNX for checkpoint {checkpoint_path}: {exc}")
+
+    return checkpoint_path
+
+
+def find_latest_checkpoint(checkpoint_dirname: str) -> str | None:
+    if not os.path.isdir("runs"):
+        return None
+
+    latest_path = None
+    latest_mtime = -1.0
+    for run_name in os.listdir("runs"):
+        run_dir = os.path.join("runs", run_name)
+        if not os.path.isdir(run_dir):
+            continue
+        ckpt_dir = os.path.join(run_dir, checkpoint_dirname)
+        if not os.path.isdir(ckpt_dir):
+            continue
+        for filename in os.listdir(ckpt_dir):
+            if not filename.endswith(".pt"):
+                continue
+            path = os.path.join(ckpt_dir, filename)
+            mtime = os.path.getmtime(path)
+            if mtime > latest_mtime:
+                latest_mtime = mtime
+                latest_path = path
+    return latest_path
+
+
+def load_training_checkpoint(
+    checkpoint_path: str,
+    agent: nn.Module,
+    optimizer: optim.Optimizer,
+    device: torch.device,
+) -> tuple[int, int]:
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    agent.load_state_dict(checkpoint["model_state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    iteration = int(checkpoint.get("iteration", 0))
+    global_step = int(checkpoint.get("global_step", 0))
+    return iteration, global_step
 
 class ModuleWrapper(nn.Module):
     def __init__(self, agent_ref, actor_mlp):
@@ -327,13 +414,28 @@ class Agent(nn.Module):
 
 
 
-def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
+def run_ppo(args: Args, make_env: Callable[[Args], Any], agent_factory: Callable[[Any, Args], nn.Module] = Agent) -> None:
     envs = make_env(args)
     args.num_envs = envs.num_envs
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    resume_path = args.resume_checkpoint.strip()
+    if not resume_path and args.auto_resume_latest:
+        auto_found = find_latest_checkpoint(args.checkpoint_dirname)
+        if auto_found is not None:
+            resume_path = auto_found
+
+    is_resuming = bool(resume_path)
+    if is_resuming:
+        resume_path = os.path.abspath(resume_path)
+        if not os.path.isfile(resume_path):
+            raise FileNotFoundError(f"Resume checkpoint not found: {resume_path}")
+        run_dir = os.path.dirname(os.path.dirname(resume_path))
+        run_name = os.path.basename(run_dir)
+    else:
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+        run_dir = os.path.join("runs", run_name)
     if args.track:
         import wandb
 
@@ -346,12 +448,6 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
-
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -362,8 +458,24 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
 
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent(envs, args).to(device)
+    agent = agent_factory(envs, args).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+
+    start_iteration = 1
+    resumed_global_step = 0
+    if is_resuming:
+        loaded_iteration, resumed_global_step = load_training_checkpoint(resume_path, agent, optimizer, device)
+        start_iteration = loaded_iteration + 1
+        print(
+            f"Resumed from checkpoint: {resume_path} | "
+            f"last_iteration={loaded_iteration}, next_iteration={start_iteration}, global_step={resumed_global_step}"
+        )
+
+    writer = SummaryWriter(run_dir, purge_step=resumed_global_step)
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
 
     # ALGO Logic: Storage setup
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
@@ -374,7 +486,7 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     # TRY NOT TO MODIFY: start the game
-    global_step = 0
+    global_step = resumed_global_step
     start_time = time.time()
     next_obs, _ = envs.reset(seed=args.seed)
     next_obs = torch.as_tensor(next_obs, dtype=torch.float32, device=device)
@@ -382,10 +494,26 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
 
     STOP_FILE = "stop_training"
 
-    for iteration in range(1, args.num_iterations + 1):
+    last_iteration = start_iteration - 1
+    for iteration in range(start_iteration, args.num_iterations + 1):
         # Stop training early : touch stop_training
         if os.path.exists(STOP_FILE):
             print("Stop signal received")
+            try:
+                os.remove(STOP_FILE)
+            except OSError:
+                pass
+            save_training_checkpoint(
+                agent,
+                optimizer,
+                iteration,
+                global_step,
+                run_dir,
+                args,
+                "stopped",
+                obs_shape=envs.single_observation_space.shape,
+            )
+            last_iteration = iteration
             break
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -513,6 +641,19 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
+        if args.checkpoint_interval > 0 and (iteration % args.checkpoint_interval == 0 or iteration == args.num_iterations):
+            checkpoint_path = save_training_checkpoint(
+                agent,
+                optimizer,
+                iteration,
+                global_step,
+                run_dir,
+                args,
+                "checkpoint",
+                obs_shape=envs.single_observation_space.shape,
+            )
+            print(f"Saved checkpoint: {checkpoint_path}")
+
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if episode_count != 0:
             writer.add_scalar("charts/avg_episodic_return", sum_episode_return / episode_count, global_step)
@@ -528,11 +669,25 @@ def run_ppo(args: Args, make_env: Callable[[Args], Any]) -> None:
         avg_ep_return = (sum_episode_return / episode_count) if episode_count > 0 else float("nan")
         print("SPS:", int(global_step / (time.time() - start_time)), ", Avg Ep Return:", round(avg_ep_return, 4), ", Global Step:", global_step, round(global_step/args.total_timesteps * 100),"%, Remaining:", round((args.total_timesteps - global_step) / global_step * (time.time() - start_time) / 60), "min")
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        last_iteration = iteration
 
+    final_checkpoint_path = save_training_checkpoint(
+        agent,
+        optimizer,
+        last_iteration,
+        global_step,
+        run_dir,
+        args,
+        "final",
+        obs_shape=envs.single_observation_space.shape,
+    )
+    print(f"Saved final checkpoint: {final_checkpoint_path}")
+
+    # Keep the original run-level ONNX artifact as well.
     export_unity_onnx_simple(
         agent=agent,
         obs_shape=envs.single_observation_space.shape,
-        out_path=f"runs/{run_name}/{run_name}_policy.onnx",
+        out_path=os.path.join(run_dir, f"{run_name}_policy.onnx"),
         opset=13,
     )
 

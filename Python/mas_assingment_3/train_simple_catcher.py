@@ -16,6 +16,14 @@ class Args(BaseArgs):
     hidden_size: int = 64
     num_envs: int = 1
     unity_env_path: str = "/Users/ilian/dev/multiagent-1/A3_Group8/builds/macos_build.app/Contents/MacOS/PacManCTF"
+    resume: str = ""
+    auto_resume: bool = False
+
+    def __post_init__(self) -> None:
+        if self.resume:
+            self.resume_checkpoint = self.resume
+        if self.auto_resume:
+            self.auto_resume_latest = True
 
 
 

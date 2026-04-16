@@ -36,7 +36,7 @@ public class FlowField
     {
         this.obstacleMap = obstacleMap;
         this.goalCells = goalCells;
-        Debug.Log("goalCells: " + goalCells.Count);
+        // Debug.Log("goalCells: " + goalCells.Count);
     }
 
     /// <summary>
@@ -163,6 +163,13 @@ public class FlowField
                 float nCost = CostField.GetValueOrDefault(n, float.MaxValue);
                 if (nCost < bestCost)
                 {
+                    if(dx != 0 && dz != 0)
+                    {
+                        var adj1 = new Vector2Int(cell.x + dx, cell.y);
+                        var adj2 = new Vector2Int(cell.x, cell.y + dz);
+                        if (!IsTraversable(adj1) || !IsTraversable(adj2))
+                            continue; // skip diagonal if corner-cutting
+                    }
                     bestCost = nCost;
                     bestNeighbor = n;
                 }

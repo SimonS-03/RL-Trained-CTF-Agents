@@ -311,12 +311,11 @@ namespace PacMan.RLAgent
             _currentFoodCount = _agent.GetCarriedFoodCount();
 
             // flow cost dense reward
-            // var newFlowCost = _coordinator.GetFlowCost(_agent.transform.position);
-            // if(newFlowCost >= float.MaxValue)
-            //     newFlowCost = _currentFlowCost;
-            // if(newFlowCost < _currentFlowCost) // Closer to food
-            //     _reward += (_currentFlowCost - newFlowCost) * _rewardWeights["flowCost"];
-            // _currentFlowCost = newFlowCost;
+            var newFlowCost = _coordinator.GetFlowCost(_agent.transform.position);
+            if(newFlowCost >= float.MaxValue)
+                newFlowCost = _currentFlowCost;
+            _reward += (_currentFlowCost - newFlowCost) * _rewardWeights["flowCost"];
+            _currentFlowCost = newFlowCost;
             
             //Living reward
             _reward += _rewardWeights["living"];
