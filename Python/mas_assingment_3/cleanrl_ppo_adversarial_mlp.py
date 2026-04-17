@@ -87,6 +87,10 @@ class Args:
     """save a training checkpoint every N PPO iterations; set to 0 to disable"""
     checkpoint_dirname: str = "checkpoints"
     """subdirectory inside the run directory used for checkpoint files"""
+    resume_checkpoint: str = ""
+    """path to a training checkpoint file to resume from"""
+    auto_resume_latest: bool = False
+    """if true and resume_checkpoint is empty, auto-pick the latest checkpoint in checkpoint_dirname"""
 
     # Adversarial-specific arguments
     role_obs_index: int = -1
@@ -105,13 +109,22 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
-class ModuleWrapper(nn.Module):
+class ActorWrapper(nn.Module):
     def __init__(self, agent_ref):
         super().__init__()
         self._agent_ref_container = [agent_ref]
 
     def forward(self, x):
         return self._agent_ref_container[0]._compute_action_mean(x)
+
+
+class CriticWrapper(nn.Module):
+    def __init__(self, agent_ref):
+        super().__init__()
+        self._agent_ref_container = [agent_ref]
+
+    def forward(self, x):
+        return self._agent_ref_container[0]._compute_value(x)
 
 
 class Agent(nn.Module):
@@ -159,7 +172,8 @@ class Agent(nn.Module):
         )
 
         # Keep this interface for ONNX export compatibility with existing utilities.
-        self.actor_mean = ModuleWrapper(self)
+        self.actor_mean = ActorWrapper(self)
+        self.critic = CriticWrapper(self)
         self.actor_logstd = nn.Parameter(torch.zeros(2, self.action_dim))
 
     def _normalize_role_index(self, role_obs_index: int) -> int:
@@ -198,13 +212,16 @@ class Agent(nn.Module):
         defender_mean = self.defender_actor_mlp(model_obs)
         return torch.where(is_attacker.unsqueeze(1), attacker_mean, defender_mean)
 
-    def get_value(self, x: torch.Tensor) -> torch.Tensor:
+    def _compute_value(self, x: torch.Tensor) -> torch.Tensor:
         flat_obs = self._flatten_obs(x)
         model_obs, is_attacker = self._split_obs_by_role(flat_obs)
 
         attacker_value = self.attacker_critic_mlp(model_obs)
         defender_value = self.defender_critic_mlp(model_obs)
         return torch.where(is_attacker.unsqueeze(1), attacker_value, defender_value)
+
+    def get_value(self, x: torch.Tensor) -> torch.Tensor:
+        return self.critic(x)
 
     def get_action_and_value(self, x: torch.Tensor, action: torch.Tensor | None = None):
         flat_obs = self._flatten_obs(x)
