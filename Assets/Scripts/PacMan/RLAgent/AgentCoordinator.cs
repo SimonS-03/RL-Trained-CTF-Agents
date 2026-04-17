@@ -45,6 +45,8 @@ namespace PacMan.RLAgent
         private int episodeLength; // in game steps, so more than Gym steps !!
         private int step;
         private int flowMapRebuildFreq = 10;
+        [SerializeField]
+        private bool doRebuildFlowMap = true;
         private bool needsReset;
         public bool timedOut;
         public bool done;
@@ -116,7 +118,7 @@ namespace PacMan.RLAgent
                 needsReset = true;
             }
 
-            if(step % flowMapRebuildFreq == 0)
+            if(step % flowMapRebuildFreq == 0 && doRebuildFlowMap)
                 rebuildFlowMapIfNeeded();
         }
 

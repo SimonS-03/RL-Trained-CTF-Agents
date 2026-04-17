@@ -16,7 +16,7 @@ namespace PacMan.RLAgent
     {
         private int enemiesInLoS;
         private bool mustRespawnRandomly;
-
+        private float previousDistanceToClosestEnemy;
         protected override void OnInitialized()
         {
             ResetState();
@@ -27,8 +27,9 @@ namespace PacMan.RLAgent
             RewardWeights["eatenByEnemy"] = -5f; // Severe penalty for being caught
             RewardWeights["living"] = -0.01f; // Step cost
             RewardWeights["touchingWall"] = -0.01f; // Discourage collisions
-            RewardWeights["noMove"] = -0.03f; // Encourage movement
+            RewardWeights["noMove"] = -0.02f; // Encourage movement
             RewardWeights["enemiesInLoS"] = 0.3f; // Reward for having more enemies in line of sight
+            RewardWeights["proximityToEnemy"] = 0.2f; // Reward for being closer to visible enemies
         }
 
         protected void ResetState()
@@ -37,6 +38,7 @@ namespace PacMan.RLAgent
             enemiesInLoS = 0;
             RewardAccumulator = 0f;
             mustRespawnRandomly = false;
+            previousDistanceToClosestEnemy = float.MaxValue;
         }
 
         protected override void OnGymReset()
@@ -79,9 +81,25 @@ namespace PacMan.RLAgent
             }
 
             // Reward having more enemies in LoS
-            var newEnemiesInLoS = Agent.GetVisibleEnemyAgents().Count;
+            var visibleEnemies = Agent.GetVisibleEnemyAgents();
+            var newEnemiesInLoS = visibleEnemies.Count;
             RewardAccumulator += RewardWeights["enemiesInLoS"] * (newEnemiesInLoS - enemiesInLoS);
             enemiesInLoS = newEnemiesInLoS;
+
+            var distanceToClosestEnemy = float.MaxValue;
+            foreach (var enemy in visibleEnemies)
+            {
+                var dist = Vector3.Distance(Agent.transform.position, enemy.transform.position);
+                if (dist < distanceToClosestEnemy)
+                {
+                    distanceToClosestEnemy = dist;
+                }
+            }
+            if(previousDistanceToClosestEnemy != float.MaxValue)
+            {
+                RewardAccumulator += RewardWeights["proximityToEnemy"] * (Mathf.Clamp01(previousDistanceToClosestEnemy / 30f) - Mathf.Clamp01(distanceToClosestEnemy / 30f));
+            }
+            previousDistanceToClosestEnemy = distanceToClosestEnemy;
 
             float returnReward = RewardAccumulator;
             RewardAccumulator = 0f;

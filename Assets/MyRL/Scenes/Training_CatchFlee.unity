@@ -40934,6 +40934,7 @@ MonoBehaviour:
   trainingAttackDefense: 1
   spawnOnBlueSide: 1
   episodeLength: 3000
+  doRebuildFlowMap: 0
   timedOut: 0
   done: 0
   drawFlowField: 0
@@ -45407,13 +45408,13 @@ PrefabInstance:
         type: 3}
       propertyPath: redAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: 3f81cd9b72b504e62bbc3b1ea7ed056a,
+      objectReference: {fileID: 3737944645222697628, guid: 6620a34dee17847f0ab6ce56987a7869,
         type: 3}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: blueAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: 3f81cd9b72b504e62bbc3b1ea7ed056a,
+      objectReference: {fileID: 3737944645222697628, guid: ea964234e3d57437db79152009de5b58,
         type: 3}
     - target: {fileID: 4594948241594532799, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -46965,10 +46966,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: MKA.GymVecEnv::Scripts.VecEnv.Core.Scripts.VecEnv.Core.GymEnvironmentTemplate
   cloneRoot: {fileID: 892656392}
-  descriptionAgent: {fileID: -5818020174146274149, guid: 3f81cd9b72b504e62bbc3b1ea7ed056a,
+  descriptionAgent: {fileID: -7757260615323416008, guid: 6620a34dee17847f0ab6ce56987a7869,
     type: 3}
   cloneOffset: {x: -50, y: 0, z: 0}
-  defaultEnvCount: 100
+  defaultEnvCount: 1
 --- !u!1 &893441640
 GameObject:
   m_ObjectHideFlags: 0
@@ -85988,6 +85989,7 @@ MonoBehaviour:
   trainingAttackDefense: 1
   spawnOnBlueSide: 1
   episodeLength: 3000
+  doRebuildFlowMap: 0
   timedOut: 0
   done: 0
   drawFlowField: 0

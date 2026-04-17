@@ -19,8 +19,8 @@ namespace PacMan.RLAgent
         public const int EnemyObservations = 4;
         public const int FriendlyObservations = 3;
         public const int RaycastObsDim = 8;  // 8 obstacle rays
-        public const int EnemyObsDim = 9;
-        public const int FriendlyObsDim = 8;
+        public const int EnemyObsDim = 5;
+        public const int FriendlyObsDim = 4;
 
         private static readonly (int dx, int dz)[] rayDirections =
         {
@@ -41,8 +41,8 @@ namespace PacMan.RLAgent
         /// - Self velocity [2]
         /// - Raycasts [8]
         /// - Distance to nearest enemy [1]
-        /// - Enemies [4 x 9]
-        /// - Friendlies [3 x 8]
+        /// - Enemies [4 x 5]
+        /// - Friendlies [3 x 4] 
         /// </summary>
         public static AgentObservation CollectObservation(
             AgentObservation observation, 
@@ -88,10 +88,10 @@ namespace PacMan.RLAgent
                 observation.AppendContinuous(Mathf.Clamp(relVel.x / 5f, -1f, 1f));
                 observation.AppendContinuous(Mathf.Clamp(relVel.z / 5f, -1f, 1f));
 
-                observation.AppendContinuous(enemy.IsGhost() ? 1f : 0f);
-                observation.AppendContinuous(enemy.IsScared() ? 1f : 0f);
-                observation.AppendContinuous(Mathf.Clamp01(enemy.GetScaredRemainingDuration() / 20f));
-                observation.AppendContinuous(Mathf.Clamp01(enemy.GetCarriedFoodCount() / 10f));
+                // observation.AppendContinuous(enemy.IsGhost() ? 1f : 0f);
+                // observation.AppendContinuous(enemy.IsScared() ? 1f : 0f);
+                // observation.AppendContinuous(Mathf.Clamp01(enemy.GetScaredRemainingDuration() / 20f));
+                // observation.AppendContinuous(Mathf.Clamp01(enemy.GetCarriedFoodCount() / 10f));
                 observation.AppendContinuous(1f); // Visible enemy flag
                 enemyIndex++;
             }
@@ -108,10 +108,10 @@ namespace PacMan.RLAgent
                 observation.AppendContinuous(0f);
                 observation.AppendContinuous(0f);
 
-                observation.AppendContinuous(enemyObservation.IsGhost ? 1f : 0f);
-                observation.AppendContinuous(0f);
-                observation.AppendContinuous(0f);
-                observation.AppendContinuous(enemyObservation.HasFood ? 1f : 0f);
+                // observation.AppendContinuous(enemyObservation.IsGhost ? 1f : 0f);
+                // observation.AppendContinuous(0f);
+                // observation.AppendContinuous(0f);
+                // observation.AppendContinuous(enemyObservation.HasFood ? 1f : 0f);
                 observation.AppendContinuous(0f); // Not visible flag for approximated enemy
 
                 enemyIndex++;
@@ -144,10 +144,10 @@ namespace PacMan.RLAgent
                 observation.AppendContinuous(Mathf.Clamp(relVel.x / 5f, -1f, 1f));
                 observation.AppendContinuous(Mathf.Clamp(relVel.z / 5f, -1f, 1f));
 
-                observation.AppendContinuous(friendly.IsGhost() ? 1f : 0f);
-                observation.AppendContinuous(friendly.IsScared() ? 1f : 0f);
-                observation.AppendContinuous(Mathf.Clamp01(friendly.GetScaredRemainingDuration() / 20f));
-                observation.AppendContinuous(Mathf.Clamp01(friendly.GetCarriedFoodCount() / 10f));
+                // observation.AppendContinuous(friendly.IsGhost() ? 1f : 0f);
+                // observation.AppendContinuous(friendly.IsScared() ? 1f : 0f);
+                // observation.AppendContinuous(Mathf.Clamp01(friendly.GetScaredRemainingDuration() / 20f));
+                // observation.AppendContinuous(Mathf.Clamp01(friendly.GetCarriedFoodCount() / 10f));
                 friendlyIndex++;
             }
             while (friendlyIndex < FriendlyObservations)
