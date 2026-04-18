@@ -38,18 +38,13 @@ public class ChaserAgent: Unity.MLAgents.Agent
     
     private float[] BuildEntityObservation(PacManAgentManager other, int isReal = 1)
     {
-        // 1. Calculate raw positional differences
-        Vector3 rawDiffPos = other.transform.position - _agent.transform.position;
-    
-        // 2. Get Distance and Normalized Direction (Unity does this math highly efficiently)
-        float distance = rawDiffPos.magnitude;
-        Vector3 direction = rawDiffPos.normalized; 
-    
-        // Normalize the distance between 0 and 1 (assuming 15f is your max sight radius)
-        float normalizedDistance = Mathf.Clamp(distance / 12.5f, 0f, 1f);
 
-        // 3. Calculate Relative Velocity
-        Vector3 relativeVel = other.GetVelocity() - _agent.GetVelocity();
+        Vector3 rawDiffPos = other.transform.position - _agent.transform.position;
+        Vector3 direction = transform.InverseTransformDirection(rawDiffPos.normalized); 
+        float distance = rawDiffPos.magnitude;
+        float normalizedDistance = Mathf.Clamp(distance / 12.5f, 0f, 1f);
+        
+        Vector3 relativeVel = transform.InverseTransformDirection(other.GetVelocity() - _agent.GetVelocity());
     
         // Note: If max speed is 3, max RELATIVE speed is 6 (crashing head-on). 
         // Divide by 6f to keep it properly between -1 and 1.
@@ -111,9 +106,9 @@ public class ChaserAgent: Unity.MLAgents.Agent
     
     public override void CollectObservations(VectorSensor sensor)
     {
-        Vector3 myVel = _agent.GetVelocity() / 3f; // Assuming 3 is max speed
-        sensor.AddObservation(Mathf.Clamp(myVel.x, -1f, 1f));
-        sensor.AddObservation(Mathf.Clamp(myVel.z, -1f, 1f));
+        // Here we only input the amoung of velocity since we are always heading in our viewed direction
+        float velMag = _agent.GetVelocity().magnitude / 3f; // Assuming 3 is max speed
+        sensor.AddObservation(velMag);
         
         if (allEnemies == null || allEnemies.Count == 0)
         {
@@ -203,14 +198,11 @@ public class ChaserAgent: Unity.MLAgents.Agent
     {
         float horizontal = actions.ContinuousActions[0];
         float vertical = actions.ContinuousActions[1];
-        if(isChaser && allEnemies.Count != 0 && Vector3.Distance(allEnemies[0].transform.position, transform.position) < 2.5f)
-        {
-            Debug.Log("Too close to enemy, using override velocity!");
-            Vector3 diffPos =  (allEnemies[0].transform.position - transform.position).normalized;
-            horizontal = diffPos.x;
-            vertical = diffPos.z;
-        }
-        controller.ApplyDesiredControl(new Vector2(horizontal, vertical).normalized);
+        Vector3 acceleration = new Vector3(horizontal, 0f, vertical);
+        acceleration = transform.TransformDirection(acceleration).normalized; // Convert from local to world space
+        
+
+        controller.ApplyDesiredControl(new Vector2(acceleration.x, acceleration.z));
 
         if (useTickPenalty)
         {

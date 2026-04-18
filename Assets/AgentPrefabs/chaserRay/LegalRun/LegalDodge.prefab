@@ -14,10 +14,10 @@ GameObject:
   - component: {fileID: 3149861640129074734}
   - component: {fileID: -4687693382850069095}
   - component: {fileID: -6118214061011162182}
-  - component: {fileID: 3203310955459094221}
   - component: {fileID: 5653406579919043120}
+  - component: {fileID: 5660363302808368158}
   m_Layer: 7
-  m_Name: DodgerRay
+  m_Name: LegalDodge
   m_TagString: Red
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -139,7 +139,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 44
+    VectorObservationSize: 50
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
@@ -148,7 +148,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: 1ae55df8e847b4c68a78786dc9b24dc5, type: 3}
+  m_Model: {fileID: 0}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: dodger
@@ -157,7 +157,7 @@ MonoBehaviour:
   m_UseChildActuators: 1
   m_DeterministicInference: 0
   m_ObservableAttributeHandling: 0
---- !u!114 &3203310955459094221
+--- !u!114 &5653406579919043120
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -166,9 +166,24 @@ MonoBehaviour:
   m_GameObject: {fileID: 3737944645222697628}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a45deeff3eaab480da01150e6fd10de6, type: 3}
+  m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ChaserAgent
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.DecisionRequester
+  DecisionPeriod: 2
+  DecisionStep: 1
+  TakeActionsBetweenDecisions: 1
+--- !u!114 &5660363302808368158
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3737944645222697628}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c156a4a43e330d644a34f73f90fde73a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LegalChaser
   agentParameters:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
@@ -184,23 +199,8 @@ MonoBehaviour:
   punishStalling: 1
   useTickPenalty: 1
   useFriendlyProximityPenalty: 1
-  taggingOpponentReward: 3
-  gettingTaggedReward: -2
---- !u!114 &5653406579919043120
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3737944645222697628}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.DecisionRequester
-  DecisionPeriod: 4
-  DecisionStep: 1
-  TakeActionsBetweenDecisions: 1
+  taggingOpponentReward: 1
+  gettingTaggedReward: -3
 --- !u!1 &5824477697522828855
 GameObject:
   m_ObjectHideFlags: 0
@@ -244,6 +244,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7590239236346415432}
   - component: {fileID: 1298650871535277742}
+  - component: {fileID: 6608040196700873132}
   m_Layer: 7
   m_Name: SensorHolder
   m_TagString: Untagged
@@ -283,7 +284,7 @@ MonoBehaviour:
   - Obstacle
   m_RaysPerDirection: 7
   m_MaxRayDegrees: 90
-  m_SphereCastRadius: 0.4
+  m_SphereCastRadius: 0.3
   m_RayLength: 10
   m_RayLayerMask:
     serializedVersion: 2
@@ -295,6 +296,18 @@ MonoBehaviour:
   rayMissColor: {r: 1, g: 1, b: 1, a: 1}
   m_StartVerticalOffset: 0.4
   m_EndVerticalOffset: 0.4
+--- !u!114 &6608040196700873132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6515008857392276025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e5fd346170efc747be0e3c2ca842694, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::xRotLock
 --- !u!1001 &2556204085055950491
 PrefabInstance:
   m_ObjectHideFlags: 0
