@@ -156,7 +156,7 @@ public class FtwAgent: Unity.MLAgents.Agent
             Debug.Log("Agent is null");
         }
         //Debug.Log(flowCoordinator.GetBorderFlowDirection(transform.position) * team);
-        Vector3 borderFlowDirection = flowCoordinator.GetBorderFlowDirection(transform.position) * team;
+        Vector3 borderFlowDirection = flowCoordinator.GetBorderFlowDirection(transform.position, gameObject.CompareTag("Blue")) * team;
         //Vector3 foodFlowDirection = flowCoordinator.GetFoodFlowDirection(transform.position, team == 1) * team;
         
         sensor.AddObservation(new Vector2(borderFlowDirection.x, borderFlowDirection.z));

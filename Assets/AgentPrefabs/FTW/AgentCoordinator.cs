@@ -29,8 +29,9 @@ namespace PacMan.RLAgent
         
 
         public ObstacleMap ObstacleMap { get; private set; }
-        private FlowField foodFlowBlue, foodFlowRed, borderFlow;
+        private FlowField foodFlowBlue, foodFlowRed, borderFlowBlue, borderFlowRed, capsuleFlowBlue, capsuleFlowRed;
         public List<Vector3> targetFoodBlue = new List<Vector3>(), targetFoodRed = new List<Vector3>(), allFood = new List<Vector3>();
+        public List<Vector3> capsulesBlue = new List<Vector3>(), capsulesRed = new List<Vector3>(), allCapsules = new List<Vector3>();
         private readonly Dictionary<int, HashSet<int>> _reportedEnemyIdsByReporter = new();
         private readonly Dictionary<int, PacManAgentManager> _enemyRefsByServerIndex = new();
 
@@ -75,7 +76,7 @@ namespace PacMan.RLAgent
                 margin: margin
             );
             float t = Time.realtimeSinceStartup;
-            BuildFlowFields();
+            buildFoodFlowFields();
             buildBorderFlow();
             Debug.Log("Flow fields built in " + (Time.realtimeSinceStartup - t) + " seconds");
             
@@ -86,13 +87,12 @@ namespace PacMan.RLAgent
         {
             step ++;
             // Debug.Log(PacManGameManager.foodList.Select(obj => obj.gameObject).ToList().Count);
-
-
+            
             if(step % flowMapRebuildFreq == 0)
                 rebuildFlowMapIfNeeded();
         }
 
-        private void BuildFlowFields(List<GameObject> activeGoals = null)
+        private void buildFoodFlowFields(List<GameObject> activeGoals = null)
         {
             if (activeGoals == null)
                 activeGoals = PacManGameManager.foodList.Select(obj => obj.gameObject).ToList().FindAll(food => food.activeSelf);
@@ -105,20 +105,32 @@ namespace PacMan.RLAgent
             foodFlowRed = FlowField.Build(ObstacleMap, targetFoodRed);
         }
 
+        private void buildCapsuleFlowFields(List<GameObject> activeCapsules = null)
+        {
+            if (activeCapsules == null)
+                activeCapsules = PacManGameManager.capsules.FindAll(capsule => capsule.activeSelf);
+            
+            allCapsules = activeCapsules.Select(obj => obj.transform.position).ToList();
+            capsulesBlue = activeCapsules.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == Team.Red).Select(obj => obj.transform.position).ToList();
+            capsulesRed = activeCapsules.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == Team.Blue).Select(obj => obj.transform.position).ToList();
+            
+            capsuleFlowBlue = FlowField.Build(ObstacleMap, capsulesBlue);
+            capsuleFlowRed = FlowField.Build(ObstacleMap, capsulesRed);
+        }
+
         private void rebuildFlowMapIfNeeded()
         {
             // TODO use coroutine or multithreading
             List<GameObject> currentActiveGoals = PacManGameManager.foodList.Select(obj => obj.gameObject).ToList().FindAll(food => food.activeSelf);
             List<Vector3> currentTargetFood = currentActiveGoals.Select(obj => obj.transform.position).ToList();
-            
             if(currentTargetFood.Count != allFood.Count) // If somebody picked up some food, recalculate!
-            {
-                BuildFlowFields(currentActiveGoals);
-            }
-            // else if(!new HashSet<Vector3>(currentTargetFood).SetEquals(new HashSet<Vector3>(targetFood)))
-            // {
-            //     BuildFlowFields();
-            // }
+                buildFoodFlowFields(currentActiveGoals);
+            
+            List<GameObject> currentActiveCapsules = PacManGameManager.capsules.FindAll(capsule => capsule.activeSelf);
+            if (currentActiveCapsules.Count != allCapsules.Count)
+                buildCapsuleFlowFields(currentActiveCapsules);
+            
+            
             allFood = currentTargetFood;
         }
 
@@ -127,13 +139,20 @@ namespace PacMan.RLAgent
             float sampleStep = .5f;
             Vector3 minBounds = PacManGameManager.mapManager.transform.TransformPoint(ObstacleMap.cellBounds.min),
                 maxBounds = PacManGameManager.mapManager.transform.TransformPoint(ObstacleMap.cellBounds.max);
-            List<Vector3> borderPoints = new List<Vector3>();
+            List<Vector3> borderPointsBlue = new List<Vector3>(), borderPointsRed = new List<Vector3>();
             for (float z = minBounds.z; z <= maxBounds.z; z += sampleStep)
             {
-                borderPoints.Add(new Vector3(0, 0, z));
+                borderPointsBlue.Add(new Vector3(-.5f, 0, z));
+                borderPointsRed.Add(new Vector3(.5f, 0, z));
             }
-            
-            borderFlow = FlowField.Build(ObstacleMap, borderPoints);
+            borderFlowBlue = FlowField.Build(ObstacleMap, borderPointsBlue);
+            borderFlowRed = FlowField.Build(ObstacleMap, borderPointsRed);
+        }
+
+        public Vector3 GetCapsuleFlowDirection(Vector3 worldPos, bool isBlue)
+        {
+            if (capsuleFlowBlue == null ||  capsuleFlowRed == null) return Vector3.zero;
+            return isBlue? capsuleFlowBlue.GetDirection(worldPos) : capsuleFlowRed.GetDirection(worldPos);
         }
         public Vector3 GetFoodFlowDirection(Vector3 worldPos, bool isBlue)
         {
@@ -147,16 +166,16 @@ namespace PacMan.RLAgent
             return  isBlue? foodFlowBlue.GetCost(worldPos) : foodFlowRed.GetCost(worldPos);
         }
         
-        public Vector3 GetBorderFlowDirection(Vector3 worldPos)
+        public Vector3 GetBorderFlowDirection(Vector3 worldPos, bool isBlue)
         {
-            if (borderFlow == null) return Vector3.zero;
-            return borderFlow.GetDirection(worldPos);
+            if (borderFlowRed == null || borderFlowBlue == null) return Vector3.zero;
+            return isBlue? borderFlowBlue.GetDirection(worldPos) : borderFlowRed.GetDirection(worldPos);
         }
 
-        public float GetBorderFlowCost(Vector3 worldPos)
+        public float GetBorderFlowCost(Vector3 worldPos, bool isBlue)
         {
-            if (borderFlow == null) return float.MaxValue;
-            return borderFlow.GetCost(worldPos);
+            if (borderFlowRed == null || borderFlowBlue == null) return float.MaxValue;
+            return isBlue? borderFlowBlue.GetCost(worldPos) : borderFlowRed.GetCost(worldPos);
         }
         
         public List<PacManAgentManager> GetSharedVisibleEnemies()
@@ -210,7 +229,7 @@ namespace PacMan.RLAgent
                 }
             }
             
-            if(drawBorderFlow && borderFlow != null) {
+            if(drawBorderFlow && borderFlowBlue != null) {
                 foreach (var pos in ObstacleMap.traversabilityPerCell) {
                     var position = new Vector3Int(pos.Key.x, 0, pos.Key.y);
 
@@ -221,8 +240,8 @@ namespace PacMan.RLAgent
                     var scale = Vector3.Scale(transform.localScale, ObstacleMap.trueScale);
                     // var gizmoSize = new Vector3(scale.x * 0.7f, 0.005f, scale.z * 0.7f);
                     
-                    Gizmos.color = Color.Lerp(Color.green, Color.red, GetBorderFlowCost(cellToWorld) / 30f);
-                    var dir = GetBorderFlowDirection(cellToWorld);
+                    Gizmos.color = Color.Lerp(Color.green, Color.red, GetBorderFlowCost(cellToWorld, true) / 30f);
+                    var dir = GetBorderFlowDirection(cellToWorld, true);
                     Gizmos.DrawRay(cellToWorld, dir.normalized * 0.4f);
 
                     // Gizmos.DrawCube(cellToWorld, gizmoSize);

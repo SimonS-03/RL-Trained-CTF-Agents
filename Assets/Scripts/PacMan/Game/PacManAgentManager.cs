@@ -19,7 +19,7 @@ namespace PacMan.Local
 
         private PacManAI _pacManAI;
         private bool _aiInitialized;
-        private FtwAgent _mlPacAgent;
+
         protected internal PacManMovementController Movement;
         protected internal PacManGameManager PacManGameManager;
         protected GameObject GhostObject;
@@ -42,7 +42,6 @@ namespace PacMan.Local
 
         public void Initialize(PacManGameManager pacManGameManager, bool deferAIInitialization = false)
         {
-            _mlPacAgent = GetComponent<FtwAgent>();
             PacManGameManager = pacManGameManager;
 
             Movement = GetComponent<PacManMovementController>();
@@ -86,6 +85,7 @@ namespace PacMan.Local
             {
                 return;
             }
+
             InitializeAI();
             _aiInitialized = true;
         }
@@ -201,7 +201,6 @@ namespace PacMan.Local
             {
                 if (foodCarried.Count > 0)
                 {
-                    _mlPacAgent.signalFoodDelivery(foodCarried.Count);
                     PacManGameManager.DropFood(this, true);
                 }
             }
@@ -275,33 +274,18 @@ namespace PacMan.Local
         public virtual void OnCollisionStay(Collision other)
         {
             var otherAgent = other.gameObject.GetComponent<PacManAgentManager>();
-            
-            if (otherAgent != null && !other.gameObject.CompareTag(gameObject.tag) && isGhost)
-            {
-                _mlPacAgent.signalKill(otherAgent.foodCarried.Count);
-            }
-            
             if (otherAgent != null && other.gameObject.tag != tag && !otherAgent.isScared && (!IsGhost() && otherAgent.IsGhost() ||
                                                                                               IsGhost() && otherAgent.IsGhost() ||
                                                                                               !IsGhost() && !otherAgent.IsGhost()))
             {
-                _mlPacAgent.signalDeath();
                 PacManGameManager.DropFood(this, false);
                 PacManGameManager.RespawnAgentAtStart(this);
             }
 
-            else if (otherAgent != null && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
+            if (otherAgent != null && other.gameObject.tag != tag && IsGhost() && isScared && !otherAgent.IsGhost())
             {
-                _mlPacAgent.signalDeath();
-                transform.position = globalStartPosition;
                 PacManGameManager.RespawnAgentAtStart(this);
             }
-
-            if (other.gameObject.tag == "Obstacle")
-            {
-                _mlPacAgent.signalHitWall();
-            }
-            
         }
 
 
@@ -414,23 +398,12 @@ namespace PacMan.Local
 
         public float GetTimeRemaining()
         {
-            if (PacManGameManager == null)
-            {
-                Debug.Log("Manager is null");
-                return 0f;
-            }
-
-            if (PacManGameManager.matchLength == 0)
-            {
-                return 0;
-            }
+            if (PacManGameManager.matchLength == 0) return 0;
             return PacManGameManager.matchLength - PacManGameManager.matchTime;
         }
 
         public int GetScore()
         {
-            if (PacManGameManager == null)
-                return 0;
             return TeamAssignmentUtil.CheckTeam(gameObject) == Team.Blue ? PacManGameManager.blueScore : PacManGameManager.redScore;
         }
 
