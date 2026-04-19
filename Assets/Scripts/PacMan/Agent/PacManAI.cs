@@ -12,6 +12,7 @@ namespace PacMan.Agent
         protected PacManAgentManager _agent;
         protected ObstacleMap _obstacleMap;
         protected MapManager _mapManager;
+        protected PacManAction _currentAction;
 
         public virtual void Initialize(MapManager mapManager) // Ticked when all agents spawned by the network and seen properly by the client. Not the same as Start or Awake in this assignment.
         {
@@ -19,17 +20,21 @@ namespace PacMan.Agent
             _mapManager = mapManager;
             _obstacleMap = ObstacleMap.Initialize(_mapManager, new List<GameObject>(), Vector3.one);
             // All of the calls below should also work in here. Report it as a bug if you find that some part of the observations is inaccessible during init.
-        }
         
-        
-        public virtual PacManAction Tick() //The Tick from the network controller
-        {
-            var droneAction = new PacManAction
+            _currentAction = new PacManAction
             {
                 Acceleration = new Vector2(0f, 0f), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
             };
+        }
+        
+        public virtual PacManAction Tick() //The Tick from the network controller
+        {
+            return _currentAction;
+        }
 
-            return droneAction;
+        public void setAction(PacManAction action)
+        {
+            _currentAction = action;
         }
     }
 }

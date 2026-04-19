@@ -24331,13 +24331,13 @@ PrefabInstance:
         type: 3}
       propertyPath: redAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: 5ea04131e068b4d20a8b04ed9fea9705,
+      objectReference: {fileID: 3737944645222697628, guid: 3fbfa751668424c76a1163b6d092c0f3,
         type: 3}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       propertyPath: blueAgentPrefab
       value: 
-      objectReference: {fileID: 3737944645222697628, guid: c3c713c3aaa014ee18a50fbf3ffe5ecc,
+      objectReference: {fileID: 3737944645222697628, guid: 3fbfa751668424c76a1163b6d092c0f3,
         type: 3}
     - target: {fileID: 3403414422347947438, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -59290,7 +59290,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2053335748
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -59336,6 +59336,9 @@ MonoBehaviour:
   targetFoodBlue: []
   targetFoodRed: []
   allFood: []
+  capsulesBlue: []
+  capsulesRed: []
+  allCapsules: []
   episodeLength: 0
   flowMapRebuildFreq: 10
   timedOut: 0
