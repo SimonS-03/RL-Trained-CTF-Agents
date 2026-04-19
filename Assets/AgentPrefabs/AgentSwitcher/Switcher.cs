@@ -13,12 +13,11 @@ public class Switcher : MonoBehaviour
     {
         Chase,
         Dodge,
-        Collect
+        Collect,
+        Retreat,
+        Capsule
     }
 
-	[Header("Trigger")]
-	[SerializeField] private bool useAlternateBehavior;
-	[SerializeField] private bool applyOnStart = true;
     [SerializeField] private Mode currentMode = Mode.Chase;
 
 	[Header("Dodging")]
@@ -82,6 +81,14 @@ public class Switcher : MonoBehaviour
                 var collectAction = GetDeterministicCollectAction();
                 _pacManAI.setAction(collectAction);
                 break;
+            case Mode.Retreat:
+                var retreatAction = GetDeterministicBorderAction();
+                _pacManAI.setAction(retreatAction);
+                break;
+            case Mode.Capsule:
+                var capsuleAction = getDeterministicCapsuleAction();
+                _pacManAI.setAction(capsuleAction);
+                break;
             default:
                 break;
         }
@@ -91,6 +98,7 @@ public class Switcher : MonoBehaviour
 	{
         if(currentMode == mode)
             return;
+        Debug.Log($"Switching to {mode} mode.");
         currentMode = mode;
         switch (mode)
         {
@@ -110,12 +118,36 @@ public class Switcher : MonoBehaviour
 
     private PacManAction GetDeterministicCollectAction()
     {
-        // Determine team before that !! by using tag surely
+        
+        Vector3 capsuleFlowDirection = AgentCoordinator.Instance.GetFoodFlowDirection(transform.position, gameObject.CompareTag("Blue"));
+        var droneAction = new PacManAction
+        {
+            Acceleration = new Vector2(capsuleFlowDirection.x, capsuleFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
+        };
+        Debug.Log($"Collect action: {droneAction.Acceleration}");
+
+        return droneAction;
+    }
+
+    private PacManAction GetDeterministicBorderAction()
+    {
+        Vector3 borderFlowDirection = AgentCoordinator.Instance.GetBorderFlowDirection(transform.position, gameObject.CompareTag("Blue"));
+        var droneAction = new PacManAction
+        {
+            Acceleration = new Vector2(borderFlowDirection.x, borderFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
+        };
+
+        return droneAction;
+    }
+
+    private PacManAction getDeterministicCapsuleAction()
+    {
         Vector3 capsuleFlowDirection = AgentCoordinator.Instance.GetCapsuleFlowDirection(transform.position, gameObject.CompareTag("Blue"));
         var droneAction = new PacManAction
         {
             Acceleration = new Vector2(capsuleFlowDirection.x, capsuleFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
         };
+        Debug.Log($"Capsule action: {droneAction.Acceleration}");
 
         return droneAction;
     }

@@ -198,8 +198,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43a28b3b9376e4ddf94a5bffd3c3ac79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Switcher
-  useAlternateBehavior: 0
-  applyOnStart: 1
   currentMode: 0
   dodgerModel: {fileID: 5022602860645237092, guid: 6efa9a278b8e02243a285be9babc4e1f,
     type: 3}
@@ -207,7 +205,6 @@ MonoBehaviour:
   chaserModel: {fileID: 5022602860645237092, guid: 00946098814648d44a1c8c46b6525b4d,
     type: 3}
   chaserBehaviorName: chaser
-  needsSwitch: 0
 --- !u!114 &-5656090324633017709
 MonoBehaviour:
   m_ObjectHideFlags: 0

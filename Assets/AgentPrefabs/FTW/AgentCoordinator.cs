@@ -101,6 +101,8 @@ namespace PacMan.RLAgent
             targetFoodBlue = activeGoals.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == Team.Red).Select(obj => obj.transform.position).ToList();
             targetFoodRed = activeGoals.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == Team.Blue).Select(obj => obj.transform.position).ToList();
             
+            Debug.Log("targetFoodBlue: " + targetFoodBlue.Count);
+            Debug.Log("targetFoodRed: " + targetFoodRed.Count);
             foodFlowBlue = FlowField.Build(ObstacleMap, targetFoodBlue);
             foodFlowRed = FlowField.Build(ObstacleMap, targetFoodRed);
         }
