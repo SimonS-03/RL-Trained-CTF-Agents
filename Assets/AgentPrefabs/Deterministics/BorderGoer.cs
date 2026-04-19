@@ -22,7 +22,10 @@ namespace PacMan.Agent
         
         public override PacManAction Tick() //The Tick from the network controller
         {
-            Vector3 borderFlowDirection = AgentCoordinator.Instance.GetBorderFlowDirection(transform.position, gameObject.CompareTag("Blue"));
+            var coordinator = gameObject.CompareTag("Blue") ? AgentCoordinator.BlueInstance : AgentCoordinator.RedInstance;
+            Vector3 borderFlowDirection = coordinator != null
+                ? coordinator.GetBorderFlowDirection(transform.position)
+                : Vector3.zero;
             var droneAction = new PacManAction
             {
                 Acceleration = new Vector2(borderFlowDirection.x, borderFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed

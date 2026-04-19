@@ -6,6 +6,9 @@ using PacMan.Agent;
 using PacMan.Interface.PacMan;
 using PacMan.RLAgent;
 using Unity.AppUI.MVVM;
+using PacMan.Local;
+using UnityEngine.Windows.Speech;
+using System.Collections.Generic;
 
 public class Switcher : MonoBehaviour
 {
@@ -31,11 +34,17 @@ public class Switcher : MonoBehaviour
 	private ModelAsset originalModel;
 	private string originalBehaviorName;
     private PacManAI _pacManAI;
+    private PacManAgentManager _agent;
+    private AgentCoordinator _agentCoordinator;
     private PacManAction _inferenceAction;
+
+    private int foodRetreatThreshold = 2;
+    private const float chaseDistanceThreshold = 10f;
 
 	private void Awake()
 	{
 		behaviorParameters = GetComponent<BehaviorParameters>();
+        _agent = GetComponent<PacManAgentManager>();
 
 		if (behaviorParameters == null)
 		{
@@ -51,6 +60,10 @@ public class Switcher : MonoBehaviour
     public void Initialize()
     {
         _pacManAI = GetComponent<PacManAI>();
+        if (gameObject.CompareTag("Blue"))
+            _agentCoordinator = AgentCoordinator.BlueInstance;
+        else
+            _agentCoordinator = AgentCoordinator.RedInstance;
     }
 
     public void ReceiveActionFromAgent(PacManAction action)
@@ -65,9 +78,21 @@ public class Switcher : MonoBehaviour
 
 	private void Update()
 	{
-        ApplySwitch(currentMode);
+        ReportObservationsToCoordinator();
         ApplyAction();
+        chooseMode();
 	}
+
+    private void ReportObservationsToCoordinator()
+    {
+        if (_agentCoordinator == null || _agent == null)
+        {
+            _agentCoordinator = gameObject.CompareTag("Blue") ? AgentCoordinator.BlueInstance : AgentCoordinator.RedInstance;
+            return;
+        }
+
+        _agentCoordinator.ReportEnemyObservations(_agent, _agent.GetEnemyObservations());
+    }
 
     private void ApplyAction()
     {
@@ -118,8 +143,7 @@ public class Switcher : MonoBehaviour
 
     private PacManAction GetDeterministicCollectAction()
     {
-        
-        Vector3 capsuleFlowDirection = AgentCoordinator.Instance.GetFoodFlowDirection(transform.position, gameObject.CompareTag("Blue"));
+        Vector3 capsuleFlowDirection = _agentCoordinator.GetFoodFlowDirection(transform.position);
         var droneAction = new PacManAction
         {
             Acceleration = new Vector2(capsuleFlowDirection.x, capsuleFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
@@ -131,7 +155,7 @@ public class Switcher : MonoBehaviour
 
     private PacManAction GetDeterministicBorderAction()
     {
-        Vector3 borderFlowDirection = AgentCoordinator.Instance.GetBorderFlowDirection(transform.position, gameObject.CompareTag("Blue"));
+        Vector3 borderFlowDirection = _agentCoordinator.GetBorderFlowDirection(transform.position);
         var droneAction = new PacManAction
         {
             Acceleration = new Vector2(borderFlowDirection.x, borderFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
@@ -142,7 +166,7 @@ public class Switcher : MonoBehaviour
 
     private PacManAction getDeterministicCapsuleAction()
     {
-        Vector3 capsuleFlowDirection = AgentCoordinator.Instance.GetCapsuleFlowDirection(transform.position, gameObject.CompareTag("Blue"));
+        Vector3 capsuleFlowDirection = _agentCoordinator.GetCapsuleFlowDirection(transform.position);
         var droneAction = new PacManAction
         {
             Acceleration = new Vector2(capsuleFlowDirection.x, capsuleFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
@@ -150,5 +174,41 @@ public class Switcher : MonoBehaviour
         Debug.Log($"Capsule action: {droneAction.Acceleration}");
 
         return droneAction;
+    }
+
+    private void chooseMode()
+    {
+        if (_agentCoordinator == null || _agent == null)
+        {
+            return;
+        }
+
+        var allEnemies = _agentCoordinator.GetAggregatedEnemyObservations();
+        float minEnemyDistance = float.MaxValue;
+        bool hasEnemyEstimate = allEnemies.Count > 0;
+        foreach(var obs in allEnemies)
+        {
+            float dist = Vector3.Distance(transform.position, obs.Position);
+            if(dist < minEnemyDistance)
+                minEnemyDistance = dist;
+        }
+
+        bool enemyIsClose = hasEnemyEstimate && minEnemyDistance <= chaseDistanceThreshold;
+
+        if (_agent.GetCarriedFoodCount() > foodRetreatThreshold)
+            ApplySwitch(Mode.Retreat);
+        else if (enemyIsClose && _agent.isGhost && !_agent.isScared)
+            ApplySwitch(Mode.Chase);
+        else if (enemyIsClose && (!_agent.isGhost || _agent.isScared))
+            ApplySwitch(Mode.Dodge);
+        else
+            ApplySwitch(Mode.Collect);
+    }
+
+    public void OnDrawGizmos()
+    {
+        // Draw a little text above the agent to indicate current mode
+        Vector3 textPosition = transform.position + Vector3.up * 2f;
+        UnityEditor.Handles.Label(textPosition, currentMode.ToString());
     }
 }

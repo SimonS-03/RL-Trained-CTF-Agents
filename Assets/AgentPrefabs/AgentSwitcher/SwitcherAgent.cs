@@ -54,7 +54,7 @@ public class SwitcherAgent: Unity.MLAgents.Agent
         {
             _switcher.ReceiveActionFromAgent(new PacManAction
             {
-                Acceleration = acceleration
+                Acceleration = new Vector2(acceleration.x, acceleration.z)
             });
         }
         else

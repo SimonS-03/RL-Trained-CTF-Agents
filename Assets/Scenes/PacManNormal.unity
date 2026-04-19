@@ -29799,6 +29799,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5637694409618810381, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
       insertIndex: 1
+      addedObject: {fileID: 1446508902}
+    - targetCorrespondingSourceObject: {fileID: 5637694409618810381, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
+        type: 3}
+      insertIndex: 2
       addedObject: {fileID: 2053335749}
     - targetCorrespondingSourceObject: {fileID: 8631366623949714217, guid: 1d86bfcc61af61f4c8bfb03ac63a295c,
         type: 3}
@@ -46924,6 +46928,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1445172740}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1446508901
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1446508902}
+  - component: {fileID: 1446508903}
+  m_Layer: 0
+  m_Name: AgentCoordinator (Red)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1446508902
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1446508901}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1401059967}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1446508903
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1446508901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cd2f1cca26ab1341b3b8e3fda83a4aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLAgent.AgentCoordinator
+  cellScale: {x: 1, y: 1, z: 1}
+  margin: {x: 0.95, y: 1, z: 0.95}
+  targetFood: []
+  allFood: []
+  targetCapsules: []
+  allCapsules: []
+  flowMapRebuildFreq: 10
+  reportStaleAfterSeconds: 2.5
+  isBlueTeam: 0
+  drawFlowField: 0
+  drawObstacleMap: 0
+  drawBorderFlow: 0
+  drawEnemyReports: 0
 --- !u!1 &1447078037
 GameObject:
   m_ObjectHideFlags: 0
@@ -49485,7 +49546,7 @@ GameObject:
   - component: {fileID: 1530293026}
   - component: {fileID: 1530293027}
   m_Layer: 0
-  m_Name: AgentCoordinator
+  m_Name: AgentCoordinator (Blue)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -49520,19 +49581,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.RLAgent.AgentCoordinator
   cellScale: {x: 1, y: 1, z: 1}
   margin: {x: 0.95, y: 1, z: 0.95}
-  targetFoodBlue: []
-  targetFoodRed: []
+  targetFood: []
   allFood: []
-  capsulesBlue: []
-  capsulesRed: []
+  targetCapsules: []
   allCapsules: []
-  episodeLength: 0
   flowMapRebuildFreq: 10
-  timedOut: 0
-  done: 0
+  reportStaleAfterSeconds: 2.5
+  isBlueTeam: 1
   drawFlowField: 0
   drawObstacleMap: 0
   drawBorderFlow: 0
+  drawEnemyReports: 0
 --- !u!1 &1530639129
 GameObject:
   m_ObjectHideFlags: 0

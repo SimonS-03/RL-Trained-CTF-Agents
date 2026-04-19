@@ -49,7 +49,7 @@ public class FtwAgent: Unity.MLAgents.Agent
     
     public override void Initialize()
     {
-        flowCoordinator = AgentCoordinator.Instance;
+        flowCoordinator = AgentCoordinator.BlueInstance;
         controller = GetComponent<PacManMovementController>();
         if (_agent == null)
         {
@@ -156,14 +156,14 @@ public class FtwAgent: Unity.MLAgents.Agent
             Debug.Log("Agent is null");
         }
         //Debug.Log(flowCoordinator.GetBorderFlowDirection(transform.position) * team);
-        Vector3 borderFlowDirection = flowCoordinator.GetBorderFlowDirection(transform.position, gameObject.CompareTag("Blue")) * team;
-        //Vector3 foodFlowDirection = flowCoordinator.GetFoodFlowDirection(transform.position, team == 1) * team;
+        Vector3 borderFlowDirection = flowCoordinator.GetBorderFlowDirection(transform.position) * team;
+        //Vector3 foodFlowDirection = flowCoordinator.GetFoodFlowDirection(transform.position) * team;
         
         sensor.AddObservation(new Vector2(borderFlowDirection.x, borderFlowDirection.z));
         //sensor.AddObservation(Mathf.Clamp01(flowCoordinator.GetBorderFlowCost(transform.position)/12f));
         
         //sensor.AddObservation(new Vector2(foodFlowDirection.x, foodFlowDirection.z));
-        //sensor.AddObservation(Mathf.Clamp01(flowCoordinator.GetFoodFlowCost(transform.position, team == 1)/12f));
+        //sensor.AddObservation(Mathf.Clamp01(flowCoordinator.GetFoodFlowCost(transform.position)/12f));
         
         
         // Reward parameters, the agent needs to know to play smartly!
@@ -184,9 +184,7 @@ public class FtwAgent: Unity.MLAgents.Agent
         {
             visibleEnemies = _agent.GetVisibleEnemyAgents();
             friendlies = _agent.GetFriendlyAgents();
-            targetFoodPositions = team == 1
-                ? new List<Vector3>(flowCoordinator.targetFoodBlue)
-                : new List<Vector3>(flowCoordinator.targetFoodRed);
+            targetFoodPositions = new List<Vector3>(flowCoordinator.targetFood);
         }
         catch (Exception e)
         {

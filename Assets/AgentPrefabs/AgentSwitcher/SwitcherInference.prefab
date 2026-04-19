@@ -220,7 +220,7 @@ MonoBehaviour:
   agentParameters:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
-  MaxStep: 0
+  MaxStep: 2500
   _agent: {fileID: 0}
 --- !u!1 &5824477697522828855
 GameObject:

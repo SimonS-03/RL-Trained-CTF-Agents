@@ -10,7 +10,6 @@ namespace PacMan.Agent
 {
     public class PillGrabber : PacManAI
     {
-        
         public override void Initialize(MapManager mapManager) // Ticked when all agents spawned by the network and seen properly by the client. Not the same as Start or Awake in this assignment.
         {
             _agent = GetComponent<PacManAgentManager>();
@@ -22,7 +21,10 @@ namespace PacMan.Agent
         
         public override PacManAction Tick() //The Tick from the network controller
         {
-            Vector3 capsuleFlowDirection = AgentCoordinator.Instance.GetCapsuleFlowDirection(transform.position, gameObject.CompareTag("Blue"));
+            var coordinator = gameObject.CompareTag("Blue") ? AgentCoordinator.BlueInstance : AgentCoordinator.RedInstance;
+            Vector3 capsuleFlowDirection = coordinator != null
+                ? coordinator.GetCapsuleFlowDirection(transform.position)
+                : Vector3.zero;
             var droneAction = new PacManAction
             {
                 Acceleration = new Vector2(capsuleFlowDirection.x, capsuleFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
