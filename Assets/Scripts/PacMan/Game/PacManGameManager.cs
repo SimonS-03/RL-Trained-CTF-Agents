@@ -816,7 +816,7 @@ namespace PacMan.Game
 
         public void EatCapsule(PacManAgentManager pacManAgentAgent, GameObject gameObject)
         {
-            if (capsules.Contains(gameObject))
+            if (capsules.Contains(gameObject) && gameObject.activeSelf)
             {
                 var scaredTeam = pacManAgentAgent.CompareTag("Red") ? blueAgents : redAgents;
 
@@ -826,8 +826,7 @@ namespace PacMan.Game
                     otherAgent.SetScared(true, CurrentSimulationTime + 10f);
                 });
 
-                capsules.Remove(gameObject);
-                _pacManWorker.RemoveObject(gameObject);
+                gameObject.SetActive(false);
             }
         }
 
