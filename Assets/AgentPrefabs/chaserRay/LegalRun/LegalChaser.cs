@@ -85,7 +85,7 @@ public class LegalChaser: Unity.MLAgents.Agent
 
         return realCount;
     }
-    private Dictionary<int, Vector3> lastHeard = new Dictionary<int, Vector3>();
+    public Dictionary<int, Vector3> lastHeard = new Dictionary<int, Vector3>();
     /// <summary>
     /// Gets a list of obervations from pacManObservations that has filtered out visible enemies
     /// </summary>
@@ -94,12 +94,18 @@ public class LegalChaser: Unity.MLAgents.Agent
     public List<float[]> filterObservation(PacManObservations observations, List<PacManAgentManager> visibleEnemies)
     {
         List<int> visibleIndices = visibleEnemies.Select(a => a.serverIndex).ToList();
+
+        foreach (var obs in visibleEnemies)
+        {
+            lastHeard[obs.serverIndex] = obs.transform.position;
+        }
         
         List<float[]> filteredObservations = new List<float[]>();
         foreach (PacManObservation obs in observations.Observations)
         {
             if (visibleIndices.Contains(obs.ServerIndex))
                 continue;
+            
             Vector3 worldPos;
             if (Vector3.Distance(Vector3.zero, obs.Position) < .001f) // If the agent is not making a sound
             {
@@ -107,6 +113,7 @@ public class LegalChaser: Unity.MLAgents.Agent
                 {
                     //Debug.Log("Used remembered observation!");
                     worldPos = lastHeard[obs.ServerIndex];
+                    //Debug.Log($"Used remembered observation:  {worldPos}");
                 }
                 else
                 {
@@ -118,6 +125,8 @@ public class LegalChaser: Unity.MLAgents.Agent
                 worldPos = obs.Position;
                 lastHeard[obs.ServerIndex] = worldPos;
             }
+            
+            
             //Debug.Log(obs.Position);
             
             Vector3 rawDiffPos = worldPos - _agent.transform.position;
@@ -195,6 +204,15 @@ public class LegalChaser: Unity.MLAgents.Agent
         if (otherAgent != null && other.gameObject.tag != tag && _agent.IsGhost() && !_agent.isScared && !otherAgent.IsGhost())
         {
             //tagged other
+            lastHeard.Remove(otherAgent.serverIndex); // Remove from memory so that we don't keep "remembering" a dead agent's position
+            foreach (PacManAgentManager friendly in _agent.GetFriendlyAgents())
+            {
+                LegalChaser legalChaser = friendly.GetComponent<LegalChaser>();
+                if (legalChaser != null)
+                {
+                    legalChaser.lastHeard.Remove(otherAgent.serverIndex);
+                }
+            }
             signalKill();
         }
     }
