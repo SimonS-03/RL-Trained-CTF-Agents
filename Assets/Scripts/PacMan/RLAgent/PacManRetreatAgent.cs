@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using PacMan.Interface.PacMan;
-using Scripts.VecEnv.Message;
 using UnityEngine;
+using Unity.MLAgents.Sensors;
 
 namespace PacMan.RLAgent
 {
@@ -50,9 +50,9 @@ namespace PacMan.RLAgent
             ResetState();
         }
 
-        protected override void CollectAgentSpecificObservations(ref AgentObservation observation)
+        protected override void CollectAgentSpecificObservations(VectorSensor sensor)
         {
-            AppendDefaultAgentSpecificObservations(ref observation);
+            AppendDefaultAgentSpecificObservations(sensor);
         }
 
         protected override void OnFixedStep()
@@ -121,14 +121,15 @@ namespace PacMan.RLAgent
             return returnReward; // So that we can add rewards during the whole episode
         }
 
-        protected override EnvironmentState GymStep()
+        protected override bool ShouldEndEpisode(out bool interrupted)
         {
+            interrupted = false;
             if (_hasLeftHomeTerritorySinceReset && PacManObservationCollector.IsInHomeTerritory(Agent))
             {
-                return EnvironmentState.Done;
+                return true;
             }
 
-            return base.GymStep();
+            return base.ShouldEndEpisode(out interrupted);
         }
 
         public virtual void OnCollisionStay(Collision other)

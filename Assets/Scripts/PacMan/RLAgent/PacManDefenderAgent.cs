@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
+using PacMan.Game;
 using PacMan.Interface.PacMan;
-using Scripts.VecEnv.Message;
 using UnityEngine;
 using PacMan.Local;
+using Unity.MLAgents.Sensors;
 
 
 namespace PacMan.RLAgent
@@ -58,19 +60,29 @@ namespace PacMan.RLAgent
             }
         }
 
-        protected override void CollectAgentSpecificObservations(ref AgentObservation observation)
+        protected override void CollectAgentSpecificObservations(VectorSensor sensor)
         {
             // AppendDefaultAgentSpecificObservations(ref observation);
             // Doesn't need food or home, just needs to flee
 
             // Append role flag: 0.0 for defender (routes to defender networks)
-            observation.AppendContinuous(0f);
+            //sensor.AddObservation(0f);
         }
 
-        protected override void CollectObservation(ref AgentObservation observation)
+        public static List<float> CollectObservationList(PacManAgentManager thisAgent, AgentCoordinator coordinator)
         {
-            // Collect shared observations and role-specific observations
-            base.CollectObservation(ref observation);
+            var values = new List<float>(104);
+            CollectAgentSpecificObservationList(values.Add, thisAgent, coordinator);
+            values.AddRange(PacManObservationCollector.CollectObservationList(thisAgent, coordinator));
+            return values;
+        }
+
+        private static void CollectAgentSpecificObservationList(
+            Action<float> append,
+            PacManAgentManager thisAgent,
+            AgentCoordinator coordinator)
+        {
+            // Keep empty for now, but route inference through defender class so this can diverge later.
         }
 
         protected override float CollectReward()
@@ -115,11 +127,13 @@ namespace PacMan.RLAgent
             var otherAgent = other.gameObject.GetComponent<PacManAgentManager>();
             bool isEnemyAgent = otherAgent != null && other.gameObject.tag != tag;
 
-            if(isEnemyAgent)
+            if (!isEnemyAgent)
             {
-                RewardAccumulator += RewardWeights["eatenByEnemy"] * (1f + RewardWeights["eatEnemyBonus"] * Agent.GetCarriedFoodCount());
-                mustRespawnRandomly = true; // GameManager will respawn at start location so we have to override this
+                return;
             }
+
+            RewardAccumulator += RewardWeights["eatenByEnemy"];
+            mustRespawnRandomly = true;
         }
 
         public virtual void OnCollisionStay(Collision other)

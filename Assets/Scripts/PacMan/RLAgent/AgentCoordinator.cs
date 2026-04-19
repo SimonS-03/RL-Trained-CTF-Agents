@@ -5,7 +5,8 @@ using Scripts.Map;
 using PacMan.Game;
 using PacMan.Local;
 using System.Threading.Tasks;
-using Scripts.VecEnv.Core;
+using Unity.MLAgents;
+using MLAgent = Unity.MLAgents.Agent;
 
 // TODO: Particle filtering for enemy position estimation
 // Classification of food into categories (Gr15)
@@ -32,7 +33,7 @@ namespace PacMan.RLAgent
         public ObstacleMap ObstacleMap { get; private set; }
         private FlowField ff;
         private FlowField ffHome;
-        private List<GymAgent> agents;
+        private List<MLAgent> agents;
         private List<Vector3> targetFood;
         private readonly Dictionary<int, HashSet<int>> _reportedEnemyIdsByReporter = new();
         private readonly Dictionary<int, PacManAgentManager> _enemyRefsByServerIndex = new();
@@ -118,13 +119,21 @@ namespace PacMan.RLAgent
                 needsReset = true;
             }
 
+            if (done)
+            {
+                needsReset = true;
+            }
+
             if(step % flowMapRebuildFreq == 0 && doRebuildFlowMap)
                 rebuildFlowMapIfNeeded();
         }
 
         public void ResetEpisode()
         {
-            if(!needsReset && !trainingAttackDefense) return;
+            if (!needsReset)
+            {
+                return;
+            }
 
             if (PacManGameManager == null)
             {
@@ -163,7 +172,7 @@ namespace PacMan.RLAgent
                     ? PacManGameManager.agents
                     : new List<PacManAgentManager>();
                 foreach(var manager in allManagers)
-                {
+                {   
                     if(manager == null)
                     {
                         continue;
@@ -174,6 +183,8 @@ namespace PacMan.RLAgent
             }
 
             step = 0;
+            timedOut = false;
+            done = false;
         }
 
         private void BuildFlowFields()
@@ -235,9 +246,13 @@ namespace PacMan.RLAgent
             }
         }
 
-        public void RespawnAgentRandomly(GymAgent agent)
+        public void RespawnAgentRandomly(MLAgent agent)
         {
             var sideSpawnPositions = spawnOnBlueSide ? blueSpawnPositions : redSpawnPositions;
+            if (sideSpawnPositions == null || sideSpawnPositions.Count == 0)
+            {
+                return;
+            }
 
             var randomSpawn = sideSpawnPositions[Random.Range(0, sideSpawnPositions.Count)];
             agent.transform.position = randomSpawn;
@@ -283,11 +298,11 @@ namespace PacMan.RLAgent
             return ffHome.GetCost(worldPos);
         }
 
-        public void RegisterAgent(GymAgent agent)
+        public void RegisterAgent(MLAgent agent)
         {
             if (agents == null)
             {
-                agents = new List<GymAgent>();
+                agents = new List<MLAgent>();
             }
             agents.Add(agent);
         }

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using PacMan.Interface.PacMan;
-using Scripts.VecEnv.Message;
 using UnityEngine;
 using PacMan.Local;
+using Unity.MLAgents.Sensors;
 
 
 namespace PacMan.RLAgent
@@ -44,9 +44,9 @@ namespace PacMan.RLAgent
             ResetState();
         }
 
-        protected override void CollectAgentSpecificObservations(ref AgentObservation observation)
+        protected override void CollectAgentSpecificObservations(VectorSensor sensor)
         {
-            AppendDefaultAgentSpecificObservations(ref observation);
+            AppendDefaultAgentSpecificObservations(sensor);
         }
 
         protected override float CollectReward()

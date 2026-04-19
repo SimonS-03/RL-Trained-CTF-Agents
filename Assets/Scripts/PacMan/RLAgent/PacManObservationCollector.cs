@@ -4,7 +4,7 @@ using System.Linq;
 using PacMan.Game;
 using PacMan.Interface.PacMan;
 using PacMan.Local;
-using Scripts.VecEnv.Message;
+using Unity.MLAgents.Sensors;
 using UnityEngine;
 
 namespace PacMan.RLAgent
@@ -44,13 +44,28 @@ namespace PacMan.RLAgent
         /// - Enemies [4 x 5]
         /// - Friendlies [3 x 4] 
         /// </summary>
-        public static AgentObservation CollectObservation(
-            AgentObservation observation, 
+        public static void CollectObservations(
+            VectorSensor sensor,
             PacManAgentManager thisAgent, 
             AgentCoordinator coordinator)
+        {
+            CollectObservationsCore(sensor.AddObservation, thisAgent, coordinator);
+        }
+
+        public static List<float> CollectObservationList(PacManAgentManager thisAgent, AgentCoordinator coordinator)
+        {
+            var values = new List<float>(104);
+            CollectObservationsCore(values.Add, thisAgent, coordinator);
+            return values;
+        }
+
+        private static void CollectObservationsCore(
+            Action<float> append,
+            PacManAgentManager thisAgent,
+            AgentCoordinator coordinator)
         {  
-            observation.AppendContinuous(Mathf.Clamp01(thisAgent.GetVelocity().x / 5f));
-            observation.AppendContinuous(Mathf.Clamp01(thisAgent.GetVelocity().z / 5f));
+            append(Mathf.Clamp(thisAgent.GetVelocity().x / 5f, -1f, 1f));
+            append(Mathf.Clamp(thisAgent.GetVelocity().z / 5f, -1f, 1f));
 
             // Raycasts for obstacle detection (8 rays)
             foreach(var (dx, dz) in rayDirections)
@@ -58,9 +73,9 @@ namespace PacMan.RLAgent
                 var direction = dx * Vector3.right + dz * Vector3.forward;
                 bool intersects = Physics.Raycast(thisAgent.transform.position, direction, out RaycastHit hitInfo, 10f, LayerMask.GetMask("Obstacle"));
                 if(intersects)
-                    observation.AppendContinuous(Mathf.Clamp01(hitInfo.distance / 10f));
+                    append(Mathf.Clamp01(hitInfo.distance / 10f));
                 else
-                    observation.AppendContinuous(1f);
+                    append(1f);
             }
 
             // Enemy observations
@@ -73,9 +88,9 @@ namespace PacMan.RLAgent
             var approximatedEnemies = GetApproximateEnemyObservations(thisAgent, visibleEnemyAgents);
             
             if(orderedVisibleEnemies.Count > 0)
-                observation.AppendContinuous(Mathf.Clamp01(Vector3.Distance(thisAgent.transform.position, orderedVisibleEnemies[0].transform.position) / 30f));
+                append(Mathf.Clamp01(Vector3.Distance(thisAgent.transform.position, orderedVisibleEnemies[0].transform.position) / 30f));
             else
-                observation.AppendContinuous(1f);
+                append(1f);
 
             int enemyIndex = 0;
             while(enemyIndex < Mathf.Min(orderedVisibleEnemies.Count, EnemyObservations))
@@ -83,16 +98,16 @@ namespace PacMan.RLAgent
                 PacManAgentManager enemy = orderedVisibleEnemies[enemyIndex];
                 var relPos = enemy.transform.position - thisAgent.transform.position;
                 var relVel = enemy.GetVelocity() - thisAgent.GetVelocity();
-                observation.AppendContinuous(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relVel.x / 5f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relVel.z / 5f, -1f, 1f));
+                append(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
+                append(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
+                append(Mathf.Clamp(relVel.x / 5f, -1f, 1f));
+                append(Mathf.Clamp(relVel.z / 5f, -1f, 1f));
 
                 // observation.AppendContinuous(enemy.IsGhost() ? 1f : 0f);
                 // observation.AppendContinuous(enemy.IsScared() ? 1f : 0f);
                 // observation.AppendContinuous(Mathf.Clamp01(enemy.GetScaredRemainingDuration() / 20f));
                 // observation.AppendContinuous(Mathf.Clamp01(enemy.GetCarriedFoodCount() / 10f));
-                observation.AppendContinuous(1f); // Visible enemy flag
+                append(1f); // Visible enemy flag
                 enemyIndex++;
             }
 
@@ -103,16 +118,16 @@ namespace PacMan.RLAgent
                 var estimatedWorldPos = ToWorldPosition(thisAgent, enemyObservation.Position);
                 var relPos = estimatedWorldPos - thisAgent.transform.position;
 
-                observation.AppendContinuous(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
-                observation.AppendContinuous(0f);
-                observation.AppendContinuous(0f);
+                append(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
+                append(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
+                append(0f);
+                append(0f);
 
                 // observation.AppendContinuous(enemyObservation.IsGhost ? 1f : 0f);
                 // observation.AppendContinuous(0f);
                 // observation.AppendContinuous(0f);
                 // observation.AppendContinuous(enemyObservation.HasFood ? 1f : 0f);
-                observation.AppendContinuous(0f); // Not visible flag for approximated enemy
+                append(0f); // Not visible flag for approximated enemy
 
                 enemyIndex++;
                 approximatedEnemyIndex++;
@@ -122,7 +137,7 @@ namespace PacMan.RLAgent
             {
                 for (int j = 0; j < EnemyObsDim; j++)
                 {
-                    observation.AppendContinuous(0f);
+                    append(0f);
                 }
                 enemyIndex++;
             }
@@ -139,10 +154,10 @@ namespace PacMan.RLAgent
                 var friendly = orderedFriendlies[friendlyIndex];
                 var relPos = friendly.transform.position - thisAgent.transform.position;
                 var relVel = friendly.GetVelocity() - thisAgent.GetVelocity();
-                observation.AppendContinuous(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relVel.x / 5f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relVel.z / 5f, -1f, 1f));
+                append(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
+                append(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
+                append(Mathf.Clamp(relVel.x / 5f, -1f, 1f));
+                append(Mathf.Clamp(relVel.z / 5f, -1f, 1f));
 
                 // observation.AppendContinuous(friendly.IsGhost() ? 1f : 0f);
                 // observation.AppendContinuous(friendly.IsScared() ? 1f : 0f);
@@ -154,12 +169,10 @@ namespace PacMan.RLAgent
             {
                 for (int j = 0; j < FriendlyObsDim; j++)
                 {
-                    observation.AppendContinuous(0f);
+                    append(0f);
                 }
                 friendlyIndex++;
             }
-
-            return observation;
         }
 
         /// <summary>

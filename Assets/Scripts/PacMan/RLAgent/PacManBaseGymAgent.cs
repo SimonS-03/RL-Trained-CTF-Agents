@@ -3,16 +3,18 @@ using System.Linq;
 using PacMan.Game;
 using PacMan.Interface.PacMan;
 using PacMan.Local;
-using Scripts.VecEnv.Core;
-using Scripts.VecEnv.Message;
+using Unity.MLAgents;
+using Unity.MLAgents.Actuators;
+using Unity.MLAgents.Sensors;
 using UnityEngine;
+using MLAgent = Unity.MLAgents.Agent;
 
 namespace PacMan.RLAgent
 {
-    public abstract class PacManBaseGymAgent : GymAgent
+    public abstract class PacManBaseGymAgent : MLAgent
     {
         [SerializeField]
-        private int physicsStepsPerGymStep = 10;
+        private int decisionInterval = 10;
 
         protected PacManAgentManager Agent { get; private set; }
         protected AgentCoordinator Coordinator { get; private set; }
@@ -20,13 +22,13 @@ namespace PacMan.RLAgent
         protected float RewardAccumulator { get; set; }
         protected Dictionary<string, float> RewardWeights { get; } = new();
 
-        protected virtual void Awake()
+        protected override void Awake()
         {
-            GymVecEnvManager.Instance.physicsStepsPerGymStep = Mathf.Max(1, physicsStepsPerGymStep);
+            base.Awake();
             Agent = GetComponent<PacManAgentManager>();
         }
 
-        protected override void Initialize()
+        public override void Initialize()
         {
             Agent ??= GetComponent<PacManAgentManager>();
             Coordinator = ResolveCoordinator();
@@ -46,15 +48,8 @@ namespace PacMan.RLAgent
         {
         }
 
-        protected override void CollectInfo(Dictionary<string, float> metadata)
+        public override void OnEpisodeBegin()
         {
-            metadata.Add("Red", Agent.CompareTag("Red") ? 1 : 0);
-            metadata.Add("Blue", Agent.CompareTag("Blue") ? 1 : 0);
-        }
-
-        protected override void GymReset()
-        {
-            // Debug.Log("GymReset called for " + gameObject.name + gameObject.GetInstanceID());
             Coordinator?.ResetEpisode();
             OnGymReset();
         }
@@ -72,41 +67,88 @@ namespace PacMan.RLAgent
             {
                 Coordinator.ReportVisibleEnemies(Agent, Agent.GetVisibleEnemyAgents());
             }
+
+            if (ShouldEndEpisode(out var interrupted))
+            {
+                if (interrupted)
+                {
+                    EpisodeInterrupted();
+                }
+                else
+                {
+                    EndEpisode();
+                }
+            }
         }
 
         protected virtual void OnFixedStep()
         {
         }
 
-        protected override void SetAction(AgentAction agentAction)
+        public override void OnActionReceived(ActionBuffers actions)
         {
-            CurrentAction = new Vector2(agentAction.Continuous[0], agentAction.Continuous[1]);
+            CurrentAction = new Vector2(actions.ContinuousActions[0], actions.ContinuousActions[1]);
+            AddReward(CollectReward());
         }
 
-        protected override void CollectObservation(ref AgentObservation observation)
+        public override void CollectObservations(VectorSensor sensor)
         {
-            CollectAgentSpecificObservations(ref observation);
-            PacManObservationCollector.CollectObservation(observation, Agent, Coordinator);
+            CollectAgentSpecificObservations(sensor);
+            PacManObservationCollector.CollectObservations(sensor, Agent, Coordinator);
         }
 
-        protected virtual void CollectAgentSpecificObservations(ref AgentObservation observation)
+        protected virtual void CollectAgentSpecificObservations(VectorSensor sensor)
         {
         }
 
-        protected void AppendDefaultAgentSpecificObservations(ref AgentObservation observation)
+        protected virtual float CollectReward()
+        {
+            return 0f;
+        }
+
+        public override void Heuristic(in ActionBuffers actionsOut)
+        {
+            var continuousActionsOut = actionsOut.ContinuousActions;
+            var x = 0f;
+            var z = 0f;
+            if (Input.GetKey("w"))
+            {
+                z = 1f;
+            }
+
+            if (Input.GetKey("a"))
+            {
+                x = -1f;
+            }
+
+            if (Input.GetKey("s"))
+            {
+                z = -1f;
+            }
+
+            if (Input.GetKey("d"))
+            {
+                x = 1f;
+            }
+
+            continuousActionsOut[0] = x;
+            continuousActionsOut[1] = z;
+        }
+
+        protected void AppendDefaultAgentSpecificObservations(VectorSensor sensor)
         {
             // Self state and local status.
-            observation.AppendContinuous((TeamAssignmentUtil.CheckTeam(Agent.gameObject) == Team.Blue) ? 1f : 0f);
-            observation.AppendContinuous(Agent.IsGhost() ? 1f : 0f);
-            observation.AppendContinuous(Agent.IsScared() ? 1f : 0f);
-            observation.AppendContinuous(Mathf.Clamp01(Agent.GetScore() / 100f));
-            observation.AppendContinuous(Mathf.Clamp01(Agent.GetCarriedFoodCount() / 10f));
+            sensor.AddObservation((TeamAssignmentUtil.CheckTeam(Agent.gameObject) == Team.Blue) ? 1f : 0f);
+            sensor.AddObservation(Agent.IsGhost() ? 1f : 0f);
+            sensor.AddObservation(Agent.IsScared() ? 1f : 0f);
+            sensor.AddObservation(Mathf.Clamp01(Agent.GetScore() / 100f));
+            sensor.AddObservation(Mathf.Clamp01(Agent.GetCarriedFoodCount() / 10f));
 
-            AppendFoodEntityObservations(ref observation);
-            AppendHomeObservations(ref observation);
+            AppendFoodEntityObservations(sensor);
+            AppendHomeObservations(sensor);
         }
 
-        protected void AppendFoodEntityObservations(ref AgentObservation observation)
+        protected void AppendFoodEntityObservations(VectorSensor sensor)
         {
             // Flow cost and dir
             // Food objects
@@ -114,15 +156,15 @@ namespace PacMan.RLAgent
             if(Coordinator != null)
             {
                 var flowDirection = Coordinator.GetFlowDirection(Agent.transform.position);
-                observation.AppendContinuous(Mathf.Clamp(flowDirection.x, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(flowDirection.z, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(Coordinator.GetFlowCost(Agent.transform.position) / 30f, 0f, 1f));
+                sensor.AddObservation(Mathf.Clamp(flowDirection.x, -1f, 1f));
+                sensor.AddObservation(Mathf.Clamp(flowDirection.z, -1f, 1f));
+                sensor.AddObservation(Mathf.Clamp(Coordinator.GetFlowCost(Agent.transform.position) / 30f, 0f, 1f));
             }
             else
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    observation.AppendContinuous(0f);
+                    sensor.AddObservation(0f);
                 }
             }
 
@@ -141,10 +183,10 @@ namespace PacMan.RLAgent
             {
                 var food = orderedFoodObjects[foodIndex];
                 var relPos = food.transform.position - Agent.transform.position;
-                observation.AppendContinuous(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
-                observation.AppendContinuous(food.activeSelf ? 1f : 0f);
-                observation.AppendContinuous(
+                sensor.AddObservation(Mathf.Clamp(relPos.x / 30f, -1f, 1f));
+                sensor.AddObservation(Mathf.Clamp(relPos.z / 30f, -1f, 1f));
+                sensor.AddObservation(food.activeSelf ? 1f : 0f);
+                sensor.AddObservation(
                     TeamAssignmentUtil.CheckTeam(food) != TeamAssignmentUtil.CheckTeam(Agent.gameObject) ? 1f : 0f
                 );
                 
@@ -165,86 +207,59 @@ namespace PacMan.RLAgent
             {
                 for (int j = 0; j < foodObsDim; j++)
                 {
-                    observation.AppendContinuous(0f);
+                    sensor.AddObservation(0f);
                 }
                 foodIndex++;
             }
 
-            observation.AppendContinuous(Mathf.Clamp01(foodDensity / 10f));
-            observation.AppendContinuous(closestFoodDist == float.MaxValue ? 1f : Mathf.Clamp01(closestFoodDist / 30f));
+            sensor.AddObservation(Mathf.Clamp01(foodDensity / 10f));
+            sensor.AddObservation(closestFoodDist == float.MaxValue ? 1f : Mathf.Clamp01(closestFoodDist / 30f));
         }
 
-        protected void AppendHomeObservations(ref AgentObservation observation)
+        protected void AppendHomeObservations(VectorSensor sensor)
         {
             // Navigation and return-home guidance.
             if (Coordinator != null)
             {
                 var homeFlowDirection = Coordinator.GetFlowDirectionToHome(Agent.transform.position);
-                observation.AppendContinuous(Mathf.Clamp(homeFlowDirection.x, -1f, 1f));
-                observation.AppendContinuous(Mathf.Clamp(homeFlowDirection.z, -1f, 1f));
+                sensor.AddObservation(Mathf.Clamp(homeFlowDirection.x, -1f, 1f));
+                sensor.AddObservation(Mathf.Clamp(homeFlowDirection.z, -1f, 1f));
                 float distanceToHomeSafe = Coordinator.GetFlowCostToHome(Agent.transform.position);
                 if (distanceToHomeSafe >= float.MaxValue)
                 {
                     distanceToHomeSafe = PacManObservationCollector.GetDistanceToHomeBorder(Agent);
                 }
-                observation.AppendContinuous(Mathf.Clamp01(distanceToHomeSafe / 50f));
+                sensor.AddObservation(Mathf.Clamp01(distanceToHomeSafe / 50f));
             }
             else
             {
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < 3; i++)
                 {
-                    observation.AppendContinuous(0f);
+                    sensor.AddObservation(0f);
                 }
             }
         }
 
-        protected override EnvironmentState GymStep()
+        protected virtual bool ShouldEndEpisode(out bool interrupted)
         {
+            interrupted = false;
             if (Coordinator == null)
             {
-                return EnvironmentState.Running;
+                return false;
             }
 
             if (Coordinator.timedOut)
             {
-                return EnvironmentState.Truncated;
+                interrupted = true;
+                return true;
             }
 
             if (Coordinator.done)
             {
-                return EnvironmentState.Done;
+                return true;
             }
 
-            return EnvironmentState.Running;
-        }
-
-        protected override AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
-        {
-            var x = 0;
-            var z = 0;
-            if (Input.GetKey("w"))
-            {
-                z = 1;
-            }
-
-            if (Input.GetKey("a"))
-            {
-                x = -1;
-            }
-
-            if (Input.GetKey("s"))
-            {
-                z = -1;
-            }
-
-            if (Input.GetKey("d"))
-            {
-                x = 1;
-            }
-
-            dummyAgentAction.Continuous[0] = x;
-            dummyAgentAction.Continuous[1] = z;
-            return dummyAgentAction;
+            return false;
         }
 
         protected void ResetCurrentAction()
@@ -268,5 +283,6 @@ namespace PacMan.RLAgent
                 .ToList()
                 .Find(coordinator => coordinator.isBlueTeam == isBlueTeam);
         }
+
     }
 }
