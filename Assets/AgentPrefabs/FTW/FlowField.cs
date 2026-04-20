@@ -36,7 +36,7 @@ public class FlowField
     {
         this.obstacleMap = obstacleMap;
         this.goalCells = goalCells;
-        Debug.Log("goalCells: " + goalCells.Count);
+        //Debug.Log("goalCells: " + goalCells.Count);
     }
 
     /// <summary>

@@ -17,9 +17,12 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/TrainingGround.unity
     guid: b695651d4dee76b44b9d87f96b262575
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/PacManMultiple.unity
     guid: b1234c516e0f34c9bbd1fcee107b5815
+  - enabled: 1
+    path: Assets/Scenes/BorderWarfare.unity
+    guid: 39b70f96fc71b8346ba9c4998f65fa2f
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f,
       type: 2}

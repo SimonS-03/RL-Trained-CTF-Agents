@@ -12,14 +12,13 @@ GameObject:
   - component: {fileID: 8998246356077573631}
   - component: {fileID: 5474480618532514740}
   - component: {fileID: 3149861640129074734}
-  - component: {fileID: -3328113813598124169}
   - component: {fileID: -4687693382850069095}
   - component: {fileID: -6118214061011162182}
-  - component: {fileID: -451854430369615389}
   - component: {fileID: 5653406579919043120}
+  - component: {fileID: 5231239362580709447}
   m_Layer: 7
-  m_Name: GPU_Blue
-  m_TagString: Blue
+  m_Name: BWFR_R
+  m_TagString: Red
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -106,18 +105,6 @@ MonoBehaviour:
   max_speed: 20
   max_acceleration: 13
   collisionEnabled: 1
---- !u!114 &-3328113813598124169
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3737944645222697628}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fd3a6e6cdc78446d81ab62251cce6700, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &-4687693382850069095
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -152,7 +139,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 3
+    VectorObservationSize: 208
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2
@@ -161,31 +148,15 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: 95351c6fe162b7b4bbad85814ee79eef, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: c148dd609fed4d246a549c34f23f9054, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
-  m_BehaviorName: PacGPU
+  m_BehaviorName: border_warfare
   TeamId: 1
   m_UseChildSensors: 1
   m_UseChildActuators: 1
   m_DeterministicInference: 0
   m_ObservableAttributeHandling: 0
---- !u!114 &-451854430369615389
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3737944645222697628}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bdab1ddb03ff54e97803608c18432cea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MLPacAgent
-  agentParameters:
-    maxStep: 0
-  hasUpgradedFromAgentParameters: 1
-  MaxStep: 0
 --- !u!114 &5653406579919043120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -198,9 +169,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.DecisionRequester
-  DecisionPeriod: 7
+  DecisionPeriod: 2
   DecisionStep: 1
   TakeActionsBetweenDecisions: 1
+--- !u!114 &5231239362580709447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3737944645222697628}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b80add3a020c53a489f1c3030b65088d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BorderWarfareAgent
+  agentParameters:
+    maxStep: 0
+  hasUpgradedFromAgentParameters: 1
+  MaxStep: 0
+  _agent: {fileID: 0}
+  coordinator: {fileID: 0}
+  taggingOpponentReward: 0.1
+  gettingTaggedReward: -0.1
+  pickUpFoodReward: 0.05
+  dropOffFoodReward: 0.1
+  idleStepPenalty: 0.025
+  idleGraceSeconds: 1
+  idleDistThreshold: 0.1
+  scoreTickPenalty: 0.01
+  rewardGettingCloserToEnemy: 0
+  rewardGettingFurtherFromEnemy: 0
+  punishStalling: 1
+  useScoreTickPenalty: 1
+  useFriendlyProximityPenalty: 1
 --- !u!1 &5824477697522828855
 GameObject:
   m_ObjectHideFlags: 0
@@ -243,10 +245,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7590239236346415432}
-  - component: {fileID: 8603408738799662165}
-  - component: {fileID: 226580474262016984}
+  - component: {fileID: 1298650871535277742}
+  - component: {fileID: 6608040196700873132}
   m_Layer: 7
-  m_Name: RotLockRays
+  m_Name: SensorHolder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -260,14 +262,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6515008857392276025}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 132902321428938902}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8603408738799662165
+--- !u!114 &1298650871535277742
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -279,27 +281,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.RayPerceptionSensorComponent3D
-  m_SensorName: RayPerceptionSensor
+  m_SensorName: ObstacleSensor
   m_DetectableTags:
-  - Blue
-  - Red
-  - Food
   - Obstacle
-  m_RaysPerDirection: 20
-  m_MaxRayDegrees: 179
-  m_SphereCastRadius: 0.2
-  m_RayLength: 20
+  m_RaysPerDirection: 12
+  m_MaxRayDegrees: 170.8
+  m_SphereCastRadius: 0.3
+  m_RayLength: 10
   m_RayLayerMask:
     serializedVersion: 2
-    m_Bits: 1160
-  m_ObservationStacks: 2
+    m_Bits: 1024
+  m_ObservationStacks: 1
   m_AlternatingRayOrder: 0
   m_UseBatchedRaycasts: 1
   rayHitColor: {r: 1, g: 0, b: 0, a: 1}
-  rayMissColor: {r: 0, g: 0, b: 0, a: 1}
-  m_StartVerticalOffset: 0.2
-  m_EndVerticalOffset: 0.2
---- !u!114 &226580474262016984
+  rayMissColor: {r: 1, g: 1, b: 1, a: 1}
+  m_StartVerticalOffset: 0.4
+  m_EndVerticalOffset: 0.4
+--- !u!114 &6608040196700873132
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -308,9 +307,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6515008857392276025}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 05de5f592196b414f875b506c9cb8c52, type: 3}
+  m_Script: {fileID: 11500000, guid: 1e5fd346170efc747be0e3c2ca842694, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RotationLock
+  m_EditorClassIdentifier: Assembly-CSharp::xRotLock
 --- !u!1001 &2556204085055950491
 PrefabInstance:
   m_ObjectHideFlags: 0

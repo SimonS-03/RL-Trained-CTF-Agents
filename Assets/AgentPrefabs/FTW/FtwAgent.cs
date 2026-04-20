@@ -49,7 +49,7 @@ public class FtwAgent: Unity.MLAgents.Agent
     
     public override void Initialize()
     {
-        flowCoordinator = AgentCoordinator.Instance;
+        //flowCoordinator = AgentCoordinator.Instance;
         controller = GetComponent<PacManMovementController>();
         if (_agent == null)
         {

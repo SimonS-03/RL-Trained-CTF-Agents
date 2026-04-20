@@ -21,22 +21,19 @@ public class TeamManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public void RegisterAll()
     {
-        int redIndex = 0, blueIndex = 0;
         foreach (Agent agent in agentContainer.GetComponentsInChildren<Agent>())
         {
-            FtwAgent ftwAgent = agent.GetComponent<FtwAgent>();
+            
             if (agent.gameObject.CompareTag("Red"))
             {
-                ftwAgent.teamMateIndex = redIndex % 2;
-                redIndex++;
+
                 redTeam.RegisterAgent(agent);
                 registeredReds.Add(agent);
             }
 
             if (agent.gameObject.CompareTag("Blue"))
             {
-                ftwAgent.teamMateIndex = blueIndex % 2;
-                blueIndex++;
+
                 blueTeam.RegisterAgent(agent);
                 registeredBlues.Add(agent);
             }

@@ -122,7 +122,9 @@ public class LegalChaser: Unity.MLAgents.Agent
             }
             else
             {
-                worldPos = obs.Position;
+                worldPos = transform.parent.TransformPoint(obs.Position);
+                //worldPos = obs.Position;
+                //Debug.Log(worldPos);
                 lastHeard[obs.ServerIndex] = worldPos;
             }
             
@@ -132,6 +134,7 @@ public class LegalChaser: Unity.MLAgents.Agent
             Vector3 rawDiffPos = worldPos - _agent.transform.position;
             Vector3 direction = transform.InverseTransformDirection(rawDiffPos.normalized); 
             float distance = rawDiffPos.magnitude;
+            //Debug.Log(distance);
             float normalizedDistance = Mathf.Clamp(distance / 12.5f, 0f, 1f);
         
             // Assuming observations do not have a velocity 

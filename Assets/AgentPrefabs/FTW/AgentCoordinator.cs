@@ -19,7 +19,6 @@ namespace PacMan.RLAgent
 {
     public class AgentCoordinator : MonoBehaviour
     {
-        public static AgentCoordinator Instance;
         private PacManGameManager PacManGameManager;
 
         [SerializeField]
@@ -52,12 +51,6 @@ namespace PacMan.RLAgent
         // Set PacManGameManager as the parent of this object, and find it in Awake instead to ensure it's available
         public void Awake()
         {
-            if(Instance != null && Instance != this)
-                Destroy(this.gameObject);
-            else
-            {
-                Instance = this;
-            }
             PacManGameManager = GetComponentInParent<PacManGameManager>();
             if (PacManGameManager == null)
             {
@@ -96,7 +89,7 @@ namespace PacMan.RLAgent
         {
             if (activeGoals == null)
                 activeGoals = PacManGameManager.foodList.Select(obj => obj.gameObject).ToList().FindAll(food => food.activeSelf);
-            Debug.Log("BuildFlowFields");
+            //Debug.Log("BuildFlowFields");
             // Target food (other's food)
             targetFoodBlue = activeGoals.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == Team.Red).Select(obj => obj.transform.position).ToList();
             targetFoodRed = activeGoals.Where(obj => TeamAssignmentUtil.CheckTeam(obj) == Team.Blue).Select(obj => obj.transform.position).ToList();
