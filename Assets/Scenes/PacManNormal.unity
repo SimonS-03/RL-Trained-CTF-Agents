@@ -7667,7 +7667,7 @@ MonoBehaviour:
   allCapsules: []
   flowMapRebuildFreq: 10
   reportStaleAfterSeconds: 2.5
-  isBlueTeam: 0
+  isBlueTeam: 1
   drawFlowField: 0
   drawObstacleMap: 0
   drawBorderFlow: 0
@@ -40916,7 +40916,7 @@ MonoBehaviour:
   allCapsules: []
   flowMapRebuildFreq: 10
   reportStaleAfterSeconds: 2.5
-  isBlueTeam: 0
+  isBlueTeam: 1
   drawFlowField: 0
   drawObstacleMap: 0
   drawBorderFlow: 0

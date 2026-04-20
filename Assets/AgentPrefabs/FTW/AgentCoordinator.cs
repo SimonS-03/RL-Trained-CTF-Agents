@@ -313,6 +313,7 @@ namespace PacMan.RLAgent
             {
                 if (observation.ServerIndex < 0)
                 {
+                    Debug.Log("Discarding observation with server index " + observation.ServerIndex);
                     continue;
                 }
 

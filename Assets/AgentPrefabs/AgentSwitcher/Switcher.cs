@@ -15,7 +15,8 @@ public class Switcher : MonoBehaviour
         Dodge,
         Collect,
         Retreat,
-        Capsule
+        Capsule,
+        Border
     }
 
     [SerializeField] private Mode currentMode = Mode.Chase;
@@ -26,7 +27,10 @@ public class Switcher : MonoBehaviour
     [Header("Chasing")]
     [SerializeField] private ModelAsset chaserModel;
     [SerializeField] private string chaserBehaviorName = "chaser";
-
+    [Header("Border Warfare")]
+    [SerializeField] private ModelAsset bwModel;
+    [SerializeField] private string bwBehaviorName = "border_warfare";
+    
 	private BehaviorParameters behaviorParameters;
 	private ModelAsset originalModel;
 	private string originalBehaviorName;
@@ -34,7 +38,6 @@ public class Switcher : MonoBehaviour
     private PacManAgentManager _agent;
     private AgentCoordinator _agentCoordinator;
     private PacManAction _inferenceAction;
-
     private int foodRetreatThreshold = 3;
     private float chaseDistanceThreshold = 10f;
     private float capsuleDistanceThreshold = 5f;
