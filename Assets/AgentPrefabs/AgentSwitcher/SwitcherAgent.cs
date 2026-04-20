@@ -19,8 +19,8 @@ public class SwitcherAgent: Unity.MLAgents.Agent
 
     public override void Initialize()
     {
-        _agent = GetComponent<PacManAgentManager>();
-        _switcher = GetComponent<Switcher>();
+        _agent = GetComponentInParent<PacManAgentManager>();
+        _switcher = GetComponentInParent<Switcher>();
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -156,7 +156,7 @@ public class SwitcherAgent: Unity.MLAgents.Agent
             }
             else
             {
-                worldPos = obs.Position;
+                worldPos = transform.parent.parent.TransformPoint(obs.Position);
                 lastHeard[obs.ServerIndex] = worldPos;
             }
             

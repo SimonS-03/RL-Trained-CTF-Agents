@@ -7654,7 +7654,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 141720081}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2cd2f1cca26ab1341b3b8e3fda83a4aa, type: 3}
   m_Name: 
@@ -7667,7 +7667,7 @@ MonoBehaviour:
   allCapsules: []
   flowMapRebuildFreq: 10
   reportStaleAfterSeconds: 2.5
-  isBlueTeam: 1
+  isBlueTeam: 0
   drawFlowField: 0
   drawObstacleMap: 0
   drawBorderFlow: 0
@@ -40916,7 +40916,7 @@ MonoBehaviour:
   allCapsules: []
   flowMapRebuildFreq: 10
   reportStaleAfterSeconds: 2.5
-  isBlueTeam: 1
+  isBlueTeam: 0
   drawFlowField: 0
   drawObstacleMap: 0
   drawBorderFlow: 0
@@ -59359,7 +59359,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1151963352}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2cd2f1cca26ab1341b3b8e3fda83a4aa, type: 3}
   m_Name: 
@@ -65332,9 +65332,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PacMan.Local.GameStatePlaybackManager
   mapManager: {fileID: 1238940898}
-  redAgentPrefab: {fileID: 3737944645222697628, guid: 447f99243ce07426e93d197be9db0917,
+  redAgentPrefab: {fileID: 3737944645222697628, guid: 6d1555d60fc2a0244a86b757c9ce0298,
     type: 3}
-  blueAgentPrefab: {fileID: 3737944645222697628, guid: 447f99243ce07426e93d197be9db0917,
+  blueAgentPrefab: {fileID: 3737944645222697628, guid: 6d1555d60fc2a0244a86b757c9ce0298,
     type: 3}
   foodPrefab: {fileID: 1664925298644982172, guid: ccb1af850bf461a4299e072011c94a13,
     type: 3}

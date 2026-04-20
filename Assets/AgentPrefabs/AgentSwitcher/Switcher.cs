@@ -6,6 +6,8 @@ using PacMan.Agent;
 using PacMan.Interface.PacMan;
 using PacMan.RLAgent;
 using PacMan.Local;
+using Unity.MLAgents.Sensors;
+using UnityEngine.Serialization;
 
 public class Switcher : MonoBehaviour
 {
@@ -21,56 +23,75 @@ public class Switcher : MonoBehaviour
 
     [SerializeField] private Mode currentMode = Mode.Chase;
 
-	[Header("Dodging")]
+    
+	[Header("Dodging and Chasing")]
+    [SerializeField] private SwitcherAgent switcherAgent;
+    [SerializeField] private BehaviorParameters behaviorParametersChaser;
 	[SerializeField] private ModelAsset dodgerModel;
 	[SerializeField] private string dodgerBehaviorName = "dodger";
-    [Header("Chasing")]
     [SerializeField] private ModelAsset chaserModel;
     [SerializeField] private string chaserBehaviorName = "chaser";
-    [Header("Border Warfare")]
+
+    [Header("Border Warfare")] 
+    [SerializeField] private BorderSwitcherAgent borderSwitcherAgent;
     [SerializeField] private ModelAsset bwModel;
     [SerializeField] private string bwBehaviorName = "border_warfare";
+    [SerializeField] private BehaviorParameters borderBehaviorParameters;
+
+    [Header("Subagents")] 
+    [SerializeField] private GameObject chaserAgentObject;
+    [SerializeField] private GameObject borderAgentObject;
     
-	private BehaviorParameters behaviorParameters;
 	private ModelAsset originalModel;
 	private string originalBehaviorName;
     private PacManAI _pacManAI;
     private PacManAgentManager _agent;
     private AgentCoordinator _agentCoordinator;
+    private AgentCoordinator _enemyCoordinator;
     private PacManAction _inferenceAction;
     private int foodRetreatThreshold = 3;
     private float chaseDistanceThreshold = 10f;
+    private float dodgeThreshold = 5f;
     private float capsuleDistanceThreshold = 5f;
 
 	private void Awake()
 	{
-		behaviorParameters = GetComponent<BehaviorParameters>();
+		//behaviorParameters_chaser = GetComponent<BehaviorParameters>();
         _agent = GetComponent<PacManAgentManager>();
 
-		if (behaviorParameters == null)
+		if (behaviorParametersChaser == null)
 		{
-			Debug.LogError($"{nameof(Switcher)} requires a {nameof(BehaviorParameters)} on {name}.", this);
+			Debug.LogWarning($"{nameof(Switcher)} requires a {nameof(BehaviorParameters)} on {name}.", this);
 			enabled = false;
 			return;
 		}
 
-		originalModel = behaviorParameters.Model;
-		originalBehaviorName = behaviorParameters.BehaviorName;
+		originalModel = behaviorParametersChaser.Model;
+		originalBehaviorName = behaviorParametersChaser.BehaviorName;
 	}
 
     public void Initialize()
     {
         _pacManAI = GetComponent<PacManAI>();
         if (gameObject.CompareTag("Blue"))
+        {
             _agentCoordinator = AgentCoordinator.BlueInstance;
+            _enemyCoordinator = AgentCoordinator.RedInstance;
+        }
+
         else
+        {
             _agentCoordinator = AgentCoordinator.RedInstance;
+            _enemyCoordinator = AgentCoordinator.BlueInstance;
+        }
+            
     }
 
     public void ReceiveActionFromAgent(PacManAction action)
     {
         if(_pacManAI == null)
         {
+            Debug.Log("PacManAI null");
             _pacManAI = GetComponent<PacManAI>();
             return;
         }
@@ -79,15 +100,23 @@ public class Switcher : MonoBehaviour
 
 	private void Update()
 	{
-        if(_pacManAI == null || _agent == null || _agentCoordinator == null || behaviorParameters == null)
+        if(_pacManAI == null || _agent == null || _agentCoordinator == null || behaviorParametersChaser == null)
         {
             _pacManAI = GetComponent<PacManAI>();
             _agent = GetComponent<PacManAgentManager>();
-            behaviorParameters = GetComponent<BehaviorParameters>();
+            behaviorParametersChaser = transform.Find("ChaseAgent").GetComponent<BehaviorParameters>();
+            borderBehaviorParameters = transform.Find("BorderAgent").GetComponent<BehaviorParameters>();
             if (gameObject.CompareTag("Blue"))
+            {
                 _agentCoordinator = AgentCoordinator.BlueInstance;
+                _enemyCoordinator = AgentCoordinator.RedInstance;
+            }
             else
+            {
                 _agentCoordinator = AgentCoordinator.RedInstance;
+                _enemyCoordinator = AgentCoordinator.BlueInstance;
+            }
+            Debug.Log("Some components are null atm");
             return;
         }
         ReportObservationsToCoordinator();
@@ -110,6 +139,7 @@ public class Switcher : MonoBehaviour
     {
         switch (currentMode)
         {
+            case Mode.Border:
             case Mode.Chase:
             case Mode.Dodge:
                 _pacManAI.setAction(_inferenceAction);
@@ -140,14 +170,26 @@ public class Switcher : MonoBehaviour
         switch (mode)
         {
             case Mode.Chase:
-                behaviorParameters.Model = chaserModel;
-                behaviorParameters.BehaviorName = chaserBehaviorName;
-                gameObject.GetComponent<Agent>().LazyInitialize();
+                borderAgentObject.SetActive(false);
+                chaserAgentObject.SetActive(true);
+                behaviorParametersChaser.Model = chaserModel;
+                behaviorParametersChaser.BehaviorName = chaserBehaviorName;
+                //gameObject.GetComponent<Agent>().LazyInitialize();
                 break;
             case Mode.Dodge:
-                behaviorParameters.Model = dodgerModel;
-                behaviorParameters.BehaviorName = dodgerBehaviorName;
-                gameObject.GetComponent<Agent>().LazyInitialize();
+                borderAgentObject.SetActive(false);
+                chaserAgentObject.SetActive(true);
+                behaviorParametersChaser.Model = dodgerModel;
+                behaviorParametersChaser.BehaviorName = dodgerBehaviorName;
+                //gameObject.GetComponent<Agent>().LazyInitialize();
+                break;
+            case Mode.Border:
+                chaserAgentObject.SetActive(false);
+                borderAgentObject.SetActive(true);
+                Debug.Log("Using border!!!!");
+                // We dont assign the model/behaviourName since it never switches for the borderAgent
+
+                //gameObject.GetComponent<Agent>().LazyInitialize();
                 break;
             default:
                 break;
@@ -162,7 +204,7 @@ public class Switcher : MonoBehaviour
         {
             Acceleration = new Vector2(capsuleFlowDirection.x, capsuleFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
         };
-        Debug.Log($"Collect action: {droneAction.Acceleration}");
+        //Debug.Log($"Collect action: {droneAction.Acceleration}");
 
         return droneAction;
     }
@@ -180,12 +222,12 @@ public class Switcher : MonoBehaviour
 
     private PacManAction getDeterministicCapsuleAction()
     {
-        Vector3 capsuleFlowDirection = _agentCoordinator.GetCapsuleFlowDirection(transform.position);
+        Vector3 capsuleFlowDirection = _agentCoordinator.GetCapsuleFlowDirection(transform.position).normalized;
         var droneAction = new PacManAction
         {
             Acceleration = new Vector2(capsuleFlowDirection.x, capsuleFlowDirection.z), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
         };
-        Debug.Log($"Capsule action: {droneAction.Acceleration}");
+        //Debug.Log($"Capsule action: {droneAction.Acceleration}");
 
         return droneAction;
     }
@@ -208,15 +250,19 @@ public class Switcher : MonoBehaviour
         }
 
         bool enemyIsClose = hasEnemyEstimate && minEnemyDistance <= chaseDistanceThreshold;
-
+        bool enemyIsCloseDodge = hasEnemyEstimate && minEnemyDistance <= dodgeThreshold;
         var distanceToNearestCapsule = _agentCoordinator.GetCapsuleFlowCost(transform.position);
 
         if (_agent.GetCarriedFoodCount() > foodRetreatThreshold)
             ApplySwitch(Mode.Retreat);
-        else if (enemyIsClose && _agent.isGhost && !_agent.isScared)
+        else if (enemyIsClose && _agent.isGhost && !_agent.isScared && Mathf.Abs(transform.position.x) > 1.5f)
             ApplySwitch(Mode.Chase);
-        else if (enemyIsClose && (!_agent.isGhost || _agent.isScared))
+        else if (enemyIsCloseDodge && (!_agent.isGhost || _agent.isScared) && Mathf.Abs(transform.position.x) > 1.5f)
             ApplySwitch(Mode.Dodge);
+        else if (_enemyCoordinator.GetBorderFlowCost(transform.position) <= 4f && Mathf.Abs(transform.position.x) < 4f)
+        {
+            ApplySwitch(Mode.Border);
+        }
         else if (distanceToNearestCapsule <= capsuleDistanceThreshold)
             ApplySwitch(Mode.Capsule);
         else
