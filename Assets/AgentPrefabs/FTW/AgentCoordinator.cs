@@ -107,6 +107,23 @@ namespace PacMan.RLAgent
             step = 0;
         }
 
+        public void ReStart()
+        {
+            ObstacleMap = ObstacleMap.Initialize(
+                PacManGameManager.mapManager,
+                new List<GameObject>(),
+                cellScale,
+                margin: margin
+            );
+            float t = Time.realtimeSinceStartup;
+            buildFoodFlowFields();
+            buildCapsuleFlowFields();
+            buildBorderFlow();
+            Debug.Log("Flow fields built in " + (Time.realtimeSinceStartup - t) + " seconds");
+            
+            step = 0;
+        }
+
         void FixedUpdate()
         {
             step ++;
@@ -193,6 +210,12 @@ namespace PacMan.RLAgent
         {
             if (capsuleFlow == null) return Vector3.zero;
             return capsuleFlow.GetDirection(worldPos);
+        }
+
+        public float GetCapsuleFlowCost(Vector3 worldPos)
+        {
+            if (capsuleFlow == null) return float.MaxValue;
+            return capsuleFlow.GetCost(worldPos);
         }
 
         public Vector3 GetFoodFlowDirection(Vector3 worldPos)

@@ -5,10 +5,7 @@ using Unity.MLAgents;
 using PacMan.Agent;
 using PacMan.Interface.PacMan;
 using PacMan.RLAgent;
-using Unity.AppUI.MVVM;
 using PacMan.Local;
-using UnityEngine.Windows.Speech;
-using System.Collections.Generic;
 
 public class Switcher : MonoBehaviour
 {
@@ -38,8 +35,9 @@ public class Switcher : MonoBehaviour
     private AgentCoordinator _agentCoordinator;
     private PacManAction _inferenceAction;
 
-    private int foodRetreatThreshold = 2;
-    private const float chaseDistanceThreshold = 10f;
+    private int foodRetreatThreshold = 3;
+    private float chaseDistanceThreshold = 10f;
+    private float capsuleDistanceThreshold = 5f;
 
 	private void Awake()
 	{
@@ -78,6 +76,17 @@ public class Switcher : MonoBehaviour
 
 	private void Update()
 	{
+        if(_pacManAI == null || _agent == null || _agentCoordinator == null || behaviorParameters == null)
+        {
+            _pacManAI = GetComponent<PacManAI>();
+            _agent = GetComponent<PacManAgentManager>();
+            behaviorParameters = GetComponent<BehaviorParameters>();
+            if (gameObject.CompareTag("Blue"))
+                _agentCoordinator = AgentCoordinator.BlueInstance;
+            else
+                _agentCoordinator = AgentCoordinator.RedInstance;
+            return;
+        }
         ReportObservationsToCoordinator();
         ApplyAction();
         chooseMode();
@@ -130,15 +139,17 @@ public class Switcher : MonoBehaviour
             case Mode.Chase:
                 behaviorParameters.Model = chaserModel;
                 behaviorParameters.BehaviorName = chaserBehaviorName;
+                gameObject.GetComponent<Agent>().LazyInitialize();
                 break;
             case Mode.Dodge:
                 behaviorParameters.Model = dodgerModel;
                 behaviorParameters.BehaviorName = dodgerBehaviorName;
+                gameObject.GetComponent<Agent>().LazyInitialize();
                 break;
             default:
                 break;
         }
-        gameObject.GetComponent<Agent>().LazyInitialize();
+        
 	}
 
     private PacManAction GetDeterministicCollectAction()
@@ -195,20 +206,24 @@ public class Switcher : MonoBehaviour
 
         bool enemyIsClose = hasEnemyEstimate && minEnemyDistance <= chaseDistanceThreshold;
 
+        var distanceToNearestCapsule = _agentCoordinator.GetCapsuleFlowCost(transform.position);
+
         if (_agent.GetCarriedFoodCount() > foodRetreatThreshold)
             ApplySwitch(Mode.Retreat);
         else if (enemyIsClose && _agent.isGhost && !_agent.isScared)
             ApplySwitch(Mode.Chase);
         else if (enemyIsClose && (!_agent.isGhost || _agent.isScared))
             ApplySwitch(Mode.Dodge);
+        else if (distanceToNearestCapsule <= capsuleDistanceThreshold)
+            ApplySwitch(Mode.Capsule);
         else
             ApplySwitch(Mode.Collect);
     }
 
-    public void OnDrawGizmos()
-    {
-        // Draw a little text above the agent to indicate current mode
-        Vector3 textPosition = transform.position + Vector3.up * 2f;
-        UnityEditor.Handles.Label(textPosition, currentMode.ToString());
-    }
+    // public void OnDrawGizmos()
+    // {
+    //     // Draw a little text above the agent to indicate current mode
+    //     Vector3 textPosition = transform.position + Vector3.up * 2f;
+    //     UnityEditor.Handles.Label(textPosition, currentMode.ToString());
+    // }
 }

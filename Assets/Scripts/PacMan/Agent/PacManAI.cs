@@ -2,6 +2,7 @@
 using System.Linq;
 using PacMan.Interface.PacMan;
 using PacMan.Local;
+using PacMan.RLAgent;
 using Scripts.Map;
 using UnityEngine;
 
@@ -13,6 +14,8 @@ namespace PacMan.Agent
         protected ObstacleMap _obstacleMap;
         protected MapManager _mapManager;
         protected PacManAction _currentAction;
+        protected AgentCoordinator _agentCoordinator;
+        protected bool restartedCoordinator = false;
 
         public virtual void Initialize(MapManager mapManager) // Ticked when all agents spawned by the network and seen properly by the client. Not the same as Start or Awake in this assignment.
         {
@@ -20,7 +23,11 @@ namespace PacMan.Agent
             _mapManager = mapManager;
             _obstacleMap = ObstacleMap.Initialize(_mapManager, new List<GameObject>(), Vector3.one);
             // All of the calls below should also work in here. Report it as a bug if you find that some part of the observations is inaccessible during init.
-        
+            if (gameObject.CompareTag("Blue"))
+                _agentCoordinator = AgentCoordinator.BlueInstance;
+            else
+                _agentCoordinator = AgentCoordinator.RedInstance;
+
             _currentAction = new PacManAction
             {
                 Acceleration = new Vector2(0f, 0f), // Controller converts to normalized if magnitude > 1. Magnitude 0.3 guarantees not observed
@@ -29,6 +36,18 @@ namespace PacMan.Agent
         
         public virtual PacManAction Tick() //The Tick from the network controller
         {
+            if(_agentCoordinator == null)
+            {
+                if (gameObject.CompareTag("Blue"))
+                    _agentCoordinator = AgentCoordinator.BlueInstance;
+                else
+                    _agentCoordinator = AgentCoordinator.RedInstance;
+            }
+            if(!restartedCoordinator)
+            {
+                _agentCoordinator.ReStart();
+                restartedCoordinator = true;
+            }
             return _currentAction;
         }
 

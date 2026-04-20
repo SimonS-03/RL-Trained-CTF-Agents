@@ -11,7 +11,6 @@ using UnityEngine;
 
 public class SwitcherAgent: Unity.MLAgents.Agent
 {
-    private PacManMovementController controller;
     [SerializeField] private PacManAgentManager _agent;
     private List<PacManAgentManager> allFriendlies =  new List<PacManAgentManager>();
     public Dictionary<int, Vector3> lastHeard = new Dictionary<int, Vector3>();
@@ -20,14 +19,21 @@ public class SwitcherAgent: Unity.MLAgents.Agent
 
     public override void Initialize()
     {
-        controller = GetComponent<PacManMovementController>();
         _agent = GetComponent<PacManAgentManager>();
         _switcher = GetComponent<Switcher>();
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        
+        if(_agent == null)
+        {
+            _agent = GetComponent<PacManAgentManager>();
+        }
+        if(_switcher == null)
+        {
+            _switcher = GetComponent<Switcher>();
+        }
+
         var observations = _agent.GetEnemyObservations();
         List<PacManAgentManager> visibleEnemies = _agent.GetVisibleEnemyAgents(); 
         var filteredObs = filterObservation(observations, visibleEnemies);
