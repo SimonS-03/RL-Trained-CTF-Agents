@@ -381,9 +381,12 @@ namespace PacMan.Local
             return _lastRespawnStep;
         }
 
-        public List<GameObject> GetCapsuleObjects()
+        public List<GameObject> GetCapsuleObjects(bool filterActive = true)
         {
-            return PacManGameManager.capsules.Select(obj => obj.gameObject).ToList();
+            return PacManGameManager?.capsules?
+                .Where(obj => obj != null && (obj.activeSelf || !filterActive))
+                .Select(obj => obj.gameObject)
+                .ToList() ?? new List<GameObject>();
         }
 
         public List<GameObject> GetFoodObjects()

@@ -160,12 +160,21 @@ public class FlowField
             foreach (var (dx, dz, _) in Neighbors)
             {
                 var n = new Vector2Int(cell.x + dx, cell.y + dz);
+                // Disallow diagonal movement if both adjacent cardinal cells are blocked (corner-cutting)
+                if (dx != 0 && dz != 0)
+                {
+                    var adj1 = new Vector2Int(cell.x + dx, cell.y);
+                    var adj2 = new Vector2Int(cell.x, cell.y + dz);
+                    if (!IsTraversable(adj1) || !IsTraversable(adj2))
+                        continue;
+                }
                 float nCost = CostField.GetValueOrDefault(n, float.MaxValue);
                 if (nCost < bestCost)
                 {
                     bestCost = nCost;
                     bestNeighbor = n;
                 }
+
             }
 
             if (bestNeighbor == cell)

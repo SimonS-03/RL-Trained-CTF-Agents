@@ -29,7 +29,7 @@ public class BorderWarfareAgent: Unity.MLAgents.Agent
     private List<PacManAgentManager> allEnemies =  new List<PacManAgentManager>(),
         allFriendlies =  new List<PacManAgentManager>();
 
-    [SerializeField] private AgentCoordinator coordinator;
+    private AgentCoordinator ourCoordinator, theirCoordinator;
     private bool isBlue;
     
     public override void Initialize()
@@ -39,9 +39,8 @@ public class BorderWarfareAgent: Unity.MLAgents.Agent
         prevPos = transform.position;
         isBlue = gameObject.CompareTag("Blue");
 
-        coordinator = getCoordinator();
-        if (coordinator == null)
-            Debug.LogWarning("coordinator null in initialize!");
+        ourCoordinator = isBlue ? AgentCoordinator.BlueInstance : AgentCoordinator.RedInstance;
+        theirCoordinator = isBlue ? AgentCoordinator.RedInstance : AgentCoordinator.BlueInstance;
     }
     
     private AgentCoordinator getCoordinator()
@@ -92,9 +91,9 @@ public class BorderWarfareAgent: Unity.MLAgents.Agent
         float normalizedFood = Mathf.Clamp01(other.foodCarried.Count / 3f);
 
         bool otherBlue = other.gameObject.CompareTag("Blue");
-        
-        float distToBorder = coordinator.GetBorderFlowCost(other.transform.position, otherBlue);
-        Vector3 directionToBorder = coordinator.GetBorderFlowDirection(other.transform.position, otherBlue);
+        AgentCoordinator theirCoordinator = otherBlue? AgentCoordinator.BlueInstance : AgentCoordinator.RedInstance;
+        float distToBorder = theirCoordinator.GetBorderFlowCost(other.transform.position);
+        Vector3 directionToBorder = theirCoordinator.GetBorderFlowDirection(other.transform.position);
         if (distToBorder > 1000f) // If the position is in an obstacle/not defined
         {
             distToBorder = Mathf.Abs(other.transform.position.x); // Assuming border is pretty much at x = 0
@@ -171,9 +170,9 @@ public class BorderWarfareAgent: Unity.MLAgents.Agent
         List<Vector3> capsules;
         try
         {
-            friendlyFood = isBlue ? coordinator.targetFoodBlue : coordinator.targetFoodRed;
-            enemyFood = isBlue ? coordinator.targetFoodRed : coordinator.targetFoodBlue;
-            capsules = coordinator.allCapsules;
+            friendlyFood = theirCoordinator.targetFood;
+            enemyFood = ourCoordinator.targetFood;
+            capsules = ourCoordinator.allCapsules;
         }
         catch
         {
@@ -301,8 +300,8 @@ public class BorderWarfareAgent: Unity.MLAgents.Agent
             Vector3 relativeVel = transform.InverseTransformDirection(Vector3.zero - _agent.GetVelocity());
             Vector3 normalizedRelVel = relativeVel / 6f; 
             
-            float distToBorder = coordinator.GetBorderFlowCost(worldPos, !isBlue);
-            Vector3 directionToBorder = coordinator.GetBorderFlowDirection(worldPos, !isBlue);
+            float distToBorder = theirCoordinator.GetBorderFlowCost(worldPos);
+            Vector3 directionToBorder = theirCoordinator.GetBorderFlowDirection(worldPos);
             if (distToBorder > 1000f) // If the position is in an obstacle/not defined
             {
                 distToBorder = Mathf.Abs(worldPos.x); // Assuming border is pretty much at x = 0
@@ -343,16 +342,6 @@ public class BorderWarfareAgent: Unity.MLAgents.Agent
     public override void CollectObservations(VectorSensor sensor)
     {
         
-        if (coordinator == null)
-        {
-            coordinator = getCoordinator();
-            if (coordinator == null)
-                Debug.LogWarning("coordinator still null in collectObservations after trying to fetch!");
-            else
-            {
-                Debug.Log("Coordinator found!");
-            }
-        }
         //Debug.Log("Visible count: " + visibleEnemies.Count + " hidden count: " + filteredObs.Count);
         
         // Here we only input the magnitude of velocity since we are always heading in our viewed direction
@@ -362,8 +351,8 @@ public class BorderWarfareAgent: Unity.MLAgents.Agent
         sensor.AddObservation(Mathf.Clamp01(_agent.foodCarried.Count/3f));
         
         // Border info
-        float distToBorder = Mathf.Clamp01(coordinator.GetBorderFlowCost(transform.position, isBlue) / 6f);
-        Vector3 directionToBorder = coordinator.GetBorderFlowDirection(transform.position, isBlue);
+        float distToBorder = Mathf.Clamp01(ourCoordinator.GetBorderFlowCost(transform.position) / 6f);
+        Vector3 directionToBorder = ourCoordinator.GetBorderFlowDirection(transform.position);
         directionToBorder = transform.InverseTransformDirection(directionToBorder).normalized;
         sensor.AddObservation(distToBorder);
         sensor.AddObservation(directionToBorder.x);
