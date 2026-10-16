@@ -6,15 +6,6 @@
       "source": "local",
       "dependencies": {}
     },
-    "com.mka.gymvecenv": {
-      "version": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.3",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {
-        "com.unity.ai.inference": "2.4.1"
-      },
-      "hash": "623736b53bc2c7b0169a39882fb67dbf96d3c890"
-    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -154,6 +145,18 @@
       "depth": 3,
       "source": "registry",
       "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.ml-agents": {
+      "version": "4.0.2",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.ai.inference": "2.5.0",
+        "com.unity.modules.physics": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0",
+        "com.unity.modules.imageconversion": "1.0.0"
+      },
       "url": "https://packages.unity.com"
     },
     "com.unity.multiplayer.center": {
